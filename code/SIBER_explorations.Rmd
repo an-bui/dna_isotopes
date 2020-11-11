@@ -1,0 +1,740 @@
+---
+title: "SIBER_explorations"
+author: "Ana Miller-ter Kuile"
+date: "11/11/2020"
+output: 
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+    toc_depth: 2
+    df_print: paged
+    theme: readable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load packages
+
+```{r}
+package.list <- c("here", "tidyverse", 
+                  "SIBER", "glmmTMB",
+                  "MuMIn", "emmeans",
+                  "ggeffects", "DHARMa",
+                  "effects")
+
+## Installing them if they aren't already on the computer
+new.packages <- package.list[!(package.list %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+## And loading them
+for(i in package.list){library(i, character.only = T)}
+```
+
+# Load data
+
+Load data, which includes cane spider isotope data, plant isotope data (for correcting), cane spider body size data, and island attributes
+
+```{r}
+spider_iso <- read.csv(here("data", "isotopes", "2015 Palmyra Cane Spider Isotopes.csv"))
+
+plant_iso <- read.csv(here("data", "isotopes", "2009-2012 Palmyra Plant Isotope Data.csv"))
+
+spider_size <- read.csv(here("data", "size", "Spider sizes 2009-2015.csv"))
+
+islands <- read.csv(here('data', "Island_data.csv"))
+```
+
+# Roadmap {#roadmap}
+
+1. Correct raw $\delta^{15}N$ values with plant $\delta^{15}N$
+
+2. Calculate SIBER objects *per island*, including:
+
+  + $\delta^{15}N$ range (**NR**): larger NR, larger trophic diversity within the population
+  
+  + $\delta^{13}C$ range (**CR**): larger CR, more resource pools, so more niche diversification among individuals
+  
+  + Total area (**TA**): niche space occupied by population 
+  
+  + Mean distance to centroid (**CD**): a measure of how similar individuals are to each other that is more invariant to outliers than TA
+  
+  + Nearest neighbor distance (**NND**): another representation of how similar individuals are to each other in trophic space, or how similar their niches are
+  
+  + Standard deviation in nearest neighbor distance (**SDNND**): less influenced by sample size than NND, gives a metric of how similar individual niches are to each other
+
+3. Pre-statistics data visualizations
+
+4. Statistical analyses (resource use could be any or all measures above of trophic diversity and niche space or raw values for nitrogen or carbon isotopes):
+
+  + 1. What is the effect of island productivity on resource use? 
+  
+  + 2. What is the effect of island size on resource use? 
+  
+  + 3. Is there a relationship between individual body size and resource use? 
+
+# $\delta^{15}N$ correction
+
+```{r}
+str(spider_iso)
+```
+Need to split ID column into island and ID columns
+
+```{r}
+spider_iso <- spider_iso %>%
+  separate(ID, 
+           into = c("Island", "ID"), 
+           sep = " "
+           )
+```
+
+Make sure that island names in spider_iso and plant_iso match
+
+```{r}
+unique(spider_iso$Island)
+```
+```{r}
+unique(plant_iso$Island.name)
+```
+
+'Para' needs to be changed to 'Paradise' in `spider_iso`. I'll do this with an `ifelse` statement in the mutate function in dplyr, which says "Remake this variable `Island` such that if `Island` = "Para", change it to "Paradise", otherwise keep the current value in the column for `Island`". 
+
+```{r}
+spider_iso <- spider_iso %>%
+  mutate(Island = ifelse(Island == "Para", "Paradise", Island))
+```
+
+There are multiple ways to do this next step, but what I'm going to do is 1) average all the plant $\delta^{15}N$ values per island giving it the name `plant_d15N`, and then 2) join that dataframe to the spider dataframe. Last, 3) I can just create a new column with the `mutate()` function that is the corrected $\delta^{15}N$ of animal $\delta^{15}N$ - plant $\delta^{15}N$. 
+
+### 1. Average plant values
+
+```{r}
+plant_iso <- plant_iso %>%
+  group_by(Island.name) %>%
+  summarise(plant_d15N = mean(d15N))
+```
+### 2. Join plant and spider isotope dataframes
+
+```{r}
+spider_iso <- spider_iso %>%
+  dplyr::select(Island, ID, d15N, d13C) %>%
+  left_join(plant_iso, by = c("Island" = "Island.name"))
+```
+
+### 3. (could do as part of 2. above) add new corrected d15N column
+
+```{r}
+spider_iso <- spider_iso %>%
+  mutate(d15N_c = d15N - plant_d15N)
+```
+
+# Calculate per-island SIBER objects
+
+(from Layman et al. 2007). the `laymanMetrics()` function in `SIBER` calculates the following metrics (explained in ecological context in the [roadmap](#roadmap)): 
+
+  + $\delta^{15}N$ range (**NR**): trophic diversity (higher = greater diversity)
+  
+  + $\delta^{13}C$ range (**CR**): resource pool use (higher = broader resource use)
+  
+  + Total area (**TA**): niche of community (bigger = bigger niche)
+  
+  + Mean distance to centroid (**CD**): similar to TA, but less influenced by outliers (bigger = bigger niche)
+  
+  + Nearest neighbor distance (**NND**): trophic similarity (bigger = more individual variation)
+  
+  + Standard deviation in nearest neighbor distance (**SDNND**): similar to NND but less influenced by sample size (bigger = more individual variation)
+  
+Annoyingly, the standard `SIBER` functions are automatically programmed to take data in a particular format (different species within communities), which is not what we are trying to accomplish here. We are trying to understand relationships between individuals in a population. So - I'm going to use the `laymanMetrics()` function to manually calculate all of these values for each community ("Island"). Then we can use these in analyses. The `laymanMetrics()` function asks for two vectors of values which correspond to the two isotope values per individual. What I'm going to do is 1) split the dataframe for isotopes into a dataframe per island, 2) build a function that will compute the layman metrics for each of these split dataframes, and 3) combine those all back into one dataframe so we can compare them. 
+
+### 1. split dataframe for isotopes into by-island dataframe
+
+```{r}
+island_isos <- split(spider_iso, spider_iso$Island)
+```
+
+### 2. Function to compute layman metrics for each dataframe by island
+
+```{r}
+population_metrics <- function(df) {
+  x <- df$d13C
+  y <- df$d15N_c
+  layman <- laymanMetrics(x, y)
+  metrics <- as.data.frame(layman$metrics)
+  
+  metrics <- metrics %>%
+    rownames_to_column(var= "metric") %>%
+    rename("value" = "layman$metrics")
+
+  return(metrics)
+
+}
+```
+
+### 3. run that function, and then combine into one dataframe
+
+```{r}
+island_layman_metrics <- lapply(island_isos, FUN = population_metrics)
+
+island_metrics <- dplyr::bind_rows(island_layman_metrics, .id = "island_layman_metrics")
+```
+
+Let's attach our island level metadata on size and productivity to this so we will be ready to do analyses! First we'll rename this column in the metrics dataframe and make sure the naming conventions match between this dataframe and that of the enviornmental data.
+
+```{r}
+island_metrics <- island_metrics %>%
+  rename("Island" = "island_layman_metrics")
+
+unique(island_metrics$Island)
+```
+
+```{r}
+unique(islands$Island)
+```
+Looks good! So we can combine these. And add some categorical values for productivity and size while we're at it. The `ifelse()` statements below are saying, look at the values for `Island_prod` and `Island_Area`, if this value is above a certain threshold, this is a "high productivity" and/or "big" island, otherwise it is a "low productivity" or "small" island. I'm also going to mutate the order of the `metric` variable so we can look at the graph below in the order we've been talking about these variables.
+
+```{r}
+island_metrics <- island_metrics %>%
+  left_join(islands, by = "Island") %>%
+  mutate(prod_level = ifelse(Island_prod > 0.007020000, "high", "low"),
+         size_level = ifelse(Island_Area > 12339.021, "big", "small")) %>%
+  mutate(metric = ifelse(metric == "dX_range", "dC_range",
+                         ifelse(metric == "dY_range", "dN_range",
+                                metric))) %>%
+  mutate(metric = factor(metric, levels = c("dC_range", "dN_range", "TA", "CD",
+                                            "NND", "SDNND")))
+```
+
+These data aren't "tidy" for analyses right now, but they are set up nicely for a quick visualization based on island environmental variables.
+
+### Island Productivity metrics
+
+```{r}
+ggplot(island_metrics, aes(x = prod_level, y = value, fill = prod_level)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = "free") +
+  theme_bw()
+```
+### Island size metrics
+
+```{r}
+ggplot(island_metrics, aes(x = size_level, y = value, fill = size_level)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = "free") +
+  theme_bw()
+```
+
+Looks like there are stronger patterns by productivity (to be expected based on all the previous literature from this field site), and *maybe* some patterns with island size, but less clear. We can run some statistics on these down the road, so stay tuned!
+
+#Pre-statistics data visualizations
+
+  + 1. What is the effect of island productivity on resource use? 
+  
+  + 2. What is the effect of island size on resource use? 
+  
+  + 3. Is there a relationship between individual body size and resource use? 
+  
+Questions 1. & 2. above are best asked with the same model (e.g. including both factors and seeing whether they're important). However, this question encompasses many different values, including:
+
+  + 1. Raw $\delta^{13}C$ values: if the absolute value of these is different, it means that predators are getting resources from different places on different islands. In this case, that would be either more marine or more terrestrial. Higher values (closer to 0) correspond to more marine, lower values (more negative) correspond to more terrestrial resources.
+
+  + 2. Raw $\delta^{15}N$ values: if the absolute value of these is different, similar to Young et al. 2013, this indicates that island environmental context shapes maximum food chain length (e.g. whether predators eat herbivores or other predators)
+
+  + 3. dC_range: the larger this range, the more niche variation there is across the population, meaning that larger values mean the population is taking advantage of multiple resource pools. 
+
+  + 4. dN_range: the larger the range, the more trophic diversity there is in that population, meaning this population is not feeding on *just* herbivores or *just* predators, but rather can have the pick of the bunch of resources in the environment.
+
+  + 5. TA and CD: how broad in both C and N space is the "niche" of the species. Are these numbers small, indicating that the population is feeding in a pretty specific set of resources, or is this a larger number, indicating that individuals are feeding on a lot of disparate resources?
+
+  + 6. NND and SDNND: how similar are individuals to each other in a population - again, is this value small, indicating that individuals are eating some smaller, similar resource pool, or are these values larger, indicating that this population is relying on a really broad range of resources?
+  
+### Raw isotope explorations
+  
+```{r}
+spider_iso <- spider_iso %>%
+  mutate(prod_level = ifelse(Island_prod > 0.007020000, "high", "low"),
+         size_level = ifelse(Island_Area > 12339.021, "big", "small"))
+  
+ggplot(spider_iso, aes(x = d13C, y = d15N_c, level = prod_level)) +
+  geom_point(aes(shape = prod_level)) +
+  stat_ellipse() +
+  stat_ellipse(aes(color = Island), linetype = "dashed") +
+  theme_bw()
+```
+Values higher on the y in this graph are higher trophic levels (e.g. eating predators vs. herbivores), values farther to the right on the x-axis correspond to more marine resources, more to the right are more terrestrial. It definitely looks like there are some island productivity patterns in bi-plot space!
+
+These same patterns in isotope bi-plot space don't seem to be happening with islet size.
+
+```{r}
+ggplot(spider_iso, aes(x = d13C, y = d15N_c, level = size_level)) +
+  geom_point(aes(shape = size_level)) +
+  stat_ellipse() +
+  stat_ellipse(aes(color = Island), linetype = "dashed") +
+  theme_bw()
+```
+
+```{r}
+ggplot(spider_iso, aes(x = prod_level, y = d15N_c, fill = size_level)) +
+  geom_boxplot() +
+  theme_bw()
+```
+Not at all surprisingly, on high productivity islands, spiders are eating at higher trophic levels, which is what we knew from Young et al. 2013.
+
+```{r}
+ggplot(spider_iso, aes(x = prod_level, y = d13C, fill = size_level)) +
+  geom_boxplot() +
+  theme_bw()
+```
+
+In this graph, a value higher on the y corresponds to more marine. Interestingly (to me), spiders on low-productivity islands seem to be taking advantage of more marine resources.
+
+### Community metric explorations
+
+These are the same graphs as above, but as a refresher here. 
+
+Island productivity: 
+
+```{r}
+ggplot(island_metrics, aes(x = prod_level, y = value, fill = prod_level)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = "free") +
+  theme_bw()
+```
+
+Island size:
+
+```{r}
+ggplot(island_metrics, aes(x = size_level, y = value, fill = size_level)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = "free") +
+  theme_bw()
+```
+
+### Body size explorations
+
+Question 3. above would be best addressed with thinking about how body size is related to d15N, d13C or both combined. 
+
+do larger spiders have higher d15N?, do larger spiders feed on different resource pools (different d13C)?
+
+Excitingly for this dataset, there doesn't seem to be a relationship between island size or productivity with spider size. So any answers we get won't be confused by just island-level differences, which is cool. Also interesting to see these isotope differences among a population that is really similar in body size (IMO)!
+
+```{r}
+ggplot(spider_iso, aes(x = prod_level, y = Mass_g, fill = size_level)) +
+  geom_boxplot() +
+  theme_bw()
+```
+
+```{r}
+spider_size <- spider_size %>%
+  filter(Year == 2015) %>%
+  dplyr::select(ID, Length_mm, Mass_g) %>%
+  separate(ID, 
+           into = c("Island", "ID"), 
+           sep = " "
+           )
+
+spider_iso <- spider_iso %>%
+  left_join(spider_size, by = c("Island", "ID"))
+```
+
+Also there don't seem to be really strong relationships between mass and isotope values
+
+```{r}
+ggplot(spider_iso, aes(x = Mass_g, y = d15N_c)) +
+  geom_point() +
+  geom_smooth(method = "lm", se =F) +
+  theme_bw()
+```
+
+```{r}
+ggplot(spider_iso, aes(x = Mass_g, y = d13C)) +
+  geom_point() +
+  geom_smooth(method = "lm", se =F) +
+  theme_bw()
+```
+
+Or in bi-plot space
+
+```{r}
+ggplot(spider_iso, aes(x = d13C, y = d15N_c, size = Mass_g)) +
+  geom_point() +
+  theme_bw()
+```
+The differences across islands don't seem to be driven by body size differences, which I think is super interesting! Instead, they are similar populations using different environments differently!
+
+# Statistical analyses (resource use could be any or all measures above of trophic diversity and niche space or raw values for nitrogen or carbon isotopes):
+
+The statistical analyses we'll be using for these datasets vary based on the data structure for each data type. 
+
+  + **raw isotope values and body size:** these data are at the *individual level* within populations on islands that have similar environmental parameters. Because individuals are grouped in island-level populations (and thus, these individuals are likely to be more similar to each other than other individuals), but what we care about is actually the environmental parameters that describe that group of islands (e.g. how big they are, their base resource productivity), we will use *linear mixed effects models (LMM)* for these analyses. These models can handle the fact that individuals are grouped by island (a "random effect" in the mixed effect model) while also asking questions about larger variables (a "fixed effect" in the mixed effect model, including island size and productivity values).
+  
+  + **layman metrics:** these are actually a much easier dataset to deal with, and will only involve using *linear models (LM)* or *generalized linear models (GLM)* like "fancy ANOVAs" to ask whether these metrics vary by island productivity and size.
+  
+I performed all of these for you and help you with interpretations, however, this is a multi-step and complicated process. I encourage you to download and read [this tutorial](https://github.com/anamtk/GLM_tutorials/blob/main/GLAMM_summer2020/GLM_Tutorial.html) from my GitHub as you work through the models so you understand why I performed these analyses this way. I'll just say - these data played very nice - I enjoyed working through these models because they didn't have many of the issues I usually have with data distributions that make me want to pull my hair out. 
+
+To refresh on your questions, which I'm going to go ahead and break down more specifically in the structure of the models I just described
+
+1. (and 2.) What are the effects of island productivity and size on spider resource use?
+
+  + raw $\delta^{13}C$ ~ productivity*size + (1|Island) (LMM)
+  
+  + raw $\delta^{15}N$ ~ productivity*size + (1|Island) (LMM)
+  
+  + dC_range ~ productivity*size (LM)
+  
+  + dN_range ~ productivity*size (LM)
+  
+  + TA ~ productivity*size (LM)
+  
+  + CD ~ productivity*size (LM)
+  
+  + NND ~ productivity*size (LM)
+  
+  + SDNND ~ productivity*size (LM)
+  
+3. Is there a relationship between individual body size and resource use? (and the in-between question of whether larger individuals are present on islands of particular attributes)
+
+  + size ~ productivity*size + (1|Island) (LMM)
+
+  + raw $\delta^{15}N$ ~ size + (1|Island) (LMM)
+  
+  + raw $\delta^{13}C$ ~ size + (1|Island) (LMM)
+  
+## raw $\delta^{13}C$ ~ productivity*size + (1|Island) (LMM)
+
+```{r}
+raw_c <- glmmTMB(d13C ~ prod_level*size_level + (1|Island),
+                 data = spider_iso)
+```
+```{r}
+dredge(raw_c)
+```
+```{r}
+raw_c_best <- glmmTMB(d13C ~ prod_level + (1|Island),
+                 data = spider_iso)
+```
+
+```{r}
+rawC_sim <- simulateResiduals(fittedModel = raw_c_best, plot=T)
+```
+```{r}
+summary(raw_c_best)
+```
+```{r}
+plot(allEffects(raw_c_best))
+```
+#### raw $\delta^{13}C$ Interpretation
+
+Predators on high productivity islands have lower $\delta^{13}C$ values than those on low productivity islands. Lower (more negative) $\delta^{13}C$ values correspond to more terrestrial resource pools, suggesting that these predators rely more on terrestrial than marine resources. ($\beta$ = 1.72, p-value < 0.001).
+  
+## raw $\delta^{15}N$ ~ productivity*size + (1|Island) (LMM)
+  
+```{r}
+raw_n <- glmmTMB(d15N_c ~ prod_level*size_level + (1|Island),
+                 data = spider_iso)
+```
+
+```{r}
+dredge(raw_n)
+```
+
+```{r}
+rawN_sim <- simulateResiduals(fittedModel = raw_n, plot=T)
+```
+
+```{r}
+summary(raw_n)
+```
+
+```{r}
+plot(allEffects(raw_n))
+```
+
+#### raw $\delta^{15}N$ Interpretation
+
+Predator trophic position is influenced by a combination of island size and productivity, with predators on high productivity islands having higher $\delta^{15}N$ values than those on low productivity islands. However, this relationship is mediated by island size, with predators on large high productivity islands having a higher $\delta^{15}N$ value than those on small high productivity islands. (**need to check on beta values and p-values for this model**)
+
+## dC_range ~ productivity*size (LM)
+
+First, make the island metrics dataframe wider, meaning there is a column for each metric and its value
+
+```{r}
+island_metrics <- island_metrics %>%
+  pivot_wider(names_from = "metric",
+              values_from = "value")
+```
+
+```{r}
+C_range <- lm(dC_range ~ prod_level*size_level,
+              data = island_metrics,
+              na.action = "na.fail")
+```
+
+```{r}
+dredge(C_range)
+```
+
+Due to the small sample size, I won't be surprised if these metrics have lower significance values overall. Based on the `dredge()` call above it looks like the best model includes no terms. However, because the $\Delta$AIC value is close to the cutoff of 2, I'm going to build a model with that variable (prod_level). Likely any significance, if any, will be marginal, in this final model. 
+
+```{r}
+C_range_best <- lm(dC_range ~ prod_level,
+              data = island_metrics)
+```
+  
+```{r}
+sim_c_range <- simulateResiduals(fittedModel = C_range_best, plot = T)
+```
+
+```{r}
+summary(C_range_best)
+```
+
+#### dC_range interpretation
+
+Although predators across high-low productivity islands vary in their raw $\delta^{13}C$ values, they do not significantly vary in the range of values for carbon across the population. This suggests that although across islands they are using different resource pools, within an island population, this does not translate to a wider range of resources used or available to predators. [this could be an interesting discussion point thinking about whether these resources are or are not even available in these different habitat patches or whether predators are just choosing something based on optimal foraging theory]. There was a marginal effect of island productivity on carbon value range ($\beta$ = 0.87, p-value = 0.08)
+
+## dN_range ~ productivity*size (LM)
+
+```{r}
+N_range <- lm(dN_range ~ prod_level*size_level,
+              data = island_metrics,
+              na.action = "na.fail")
+```
+
+```{r}
+dredge(N_range)
+```
+
+That cutoff of $\Delta$AIC is higher for this one, so going to go ahead and say that N range does not change with either island variable, even marginally.
+
+```{r}
+N_range_best <- lm(dN_range ~ 1,
+              data = island_metrics)
+```
+  
+```{r}
+sim_n_range <- simulateResiduals(fittedModel = N_range_best, plot = T)
+```
+
+#### dN_range interpretation
+
+Although predators across high-low productivity and large-small islands vary in their raw $\delta^{15}N$ values, they do not significantly vary in the range of values for nitrogen across the population. This suggests that they have different trophic niches across different islands, not that island environmental context encourages a broader diversity of trophic resources. This could, again, either be because these resources don't exist, or some degree of "choice" by predators based on optimal foraging. 
+
+## TA ~ productivity*size (LM)
+
+```{r}
+TA <- lm(TA ~ prod_level*size_level,
+              data = island_metrics,
+              na.action = "na.fail")
+```
+
+```{r}
+dredge(TA)
+```
+
+Again, this $\Delta$AIC value is high, so yeah, no marginal patterns to explore. 
+
+```{r}
+TA_best <- lm(TA ~ 1,
+              data = island_metrics)
+```
+  
+```{r}
+sim_ta <- simulateResiduals(fittedModel = TA_best, plot = T)
+```
+
+#### TA interpretation
+
+Predators in different environmental contexts do not have broader trophic niches, even though their trophic niche is clearly different (both in terms of carbon and nitrogen) across these same environmental contexts. Again, a good discussion here would be about why it might be beneficial for species to specialize based on the resources most optimal for them in a given environment. 
+
+## CD ~ productivity*size (LM)
+
+```{r}
+CD <- lm(CD ~ prod_level*size_level,
+              data = island_metrics,
+              na.action = "na.fail")
+```
+
+```{r}
+dredge(CD)
+```
+
+Again, high $\Delta$AIC. 
+
+```{r}
+CD_best <- lm(CD ~ 1,
+              data = island_metrics)
+```
+  
+```{r}
+sim_CD <- simulateResiduals(fittedModel = CD_best, plot = T)
+```
+ 
+#### CD interpretation
+
+This interpretation is really similar to that of TA, since these values are variations of the same measure of trophic space. Predators in different environmental contexts do not have broader trophic niches, even though their trophic niche is clearly different (both in terms of carbon and nitrogen) across these same environmental contexts. Again, a good discussion here would be about why it might be beneficial for species to specialize based on the resources most optimal for them in a given environment. 
+
+## NND ~ productivity*size (LM)
+
+```{r}
+NND <- lm(NND ~ prod_level*size_level,
+              data = island_metrics,
+              na.action = "na.fail")
+```
+
+```{r}
+dredge(NND)
+```
+
+This $\Delta$AIC value is close, so we can look at that factor `prod_level` in a model for marginal significance.
+
+```{r}
+NND_best <- lm(NND ~ prod_level,
+              data = island_metrics)
+```
+  
+```{r}
+sim_nnd <- simulateResiduals(fittedModel = NND_best, plot = T)
+```
+
+```{r}
+summary(NND_best)
+```
+Yep, marginal significance. 
+
+```{r}
+plot(allEffects(NND_best))
+```
+
+#### NND interpretation
+
+There doesn't seem to be a strong significant effect of environmental context on nearest neighbor distance. This means that predators tend to be trophically similar to each other across environmental contexts. We did see a marginal effect of island productivity on this value, with predators on low productivity islands having slightly higher values for nearest neighbor distance ($\beta$ = 0.18, p-value = 0.10). What this means is that on low productivity islands, predators are slightly more trophically distinct within a population, maybe related to the need to search further for resources. Again, this is only a marginal effect. 
+
+## SDNND ~ productivity*size (LM)
+  
+```{r}
+SDNND <- lm(SDNND ~ prod_level*size_level,
+              data = island_metrics,
+              na.action = "na.fail")
+```
+
+```{r}
+dredge(SDNND)
+```
+Again, high $\Delta$AIC value.
+
+```{r}
+SDNND_best <- lm(SDNND ~ 1,
+              data = island_metrics)
+```
+  
+```{r}
+sim_sdnnd <- simulateResiduals(fittedModel = SDNND_best, plot = T)
+```
+
+#### SDNND interpretation
+
+There doesn't seem to be a strong significant effect of environmental context on the standard deviation of nearest neighbor distance. This means that predators tend to be trophically similar to each other across environmental contexts. Given that this metric is less sensitive to sample size than NND - I would trust this result more than the marginal result above
+
+## size ~ productivity*size + (1|Island) (LMM)
+
+```{r}
+size_is <- glmmTMB(Mass_g ~ prod_level*size_level + (1|Island),
+                 data = spider_iso)
+```
+
+```{r}
+dredge(size_is)
+```
+
+$\Delta$AIC is within that 2AIC value cutoff, so I'll go ahead and explore this likely marginal effect
+
+```{r}
+size_is_best <- glmmTMB(Mass_g ~ size_level + (1|Island),
+                 data = spider_iso)
+```
+
+
+```{r}
+size_is_sim <- simulateResiduals(fittedModel = size_is_best, plot=T)
+```
+
+```{r}
+summary(size_is_best)
+```
+
+Ran this anyway, but a pretty clearly non-significant difference based on island size in body size.
+
+```{r}
+plot(allEffects(size_is_best))
+```
+#### Size by island interpretation
+
+Even though predators are trophically distinct across high-low productivity islands (and also across big-small), this does not translate to individuals in the population reaching greater body sizes on islands with higher trophic positions. Although they eat more predators, predators on higher productivity islands aren't larger. This could be evidence of the underlying increase in trophic complexity suggested in Young et al. 2013 on high productivity islands. A future exploration could be whether these predators, even though similar in size, could be different in population demographics (e.g population size, fecundity) across these environments based on resource availability.
+
+## raw $\delta^{13}C$ ~ size + (1|Island) (LMM)
+
+
+```{r}
+C_size <- glmmTMB(d13C ~ Mass_g + (1|Island),
+                 data = spider_iso)
+```
+
+```{r}
+dredge(C_size)
+```
+
+```{r}
+size_c_sim <- simulateResiduals(fittedModel = C_size, plot=T)
+```
+
+```{r}
+summary(C_size)
+```
+
+```{r}
+plot(allEffects(C_size))
+```
+#### raw $\delta^{13}C$ ~ size Interpretions
+
+Larger individuals have a slightly higher $\delta^{13}C$ value, suggesting that they are eating more marine, slightly.
+
+## raw $\delta^{15}N$ ~ size + (1|Island) (LMM)
+
+```{r}
+N_size <- glmmTMB(d15N_c ~ Mass_g + (1|Island),
+                 data = spider_iso)
+```
+
+```{r}
+dredge(N_size)
+```
+
+```{r}
+N_size_best <- glmmTMB(d15N_c ~ 1 + (1|Island),
+                 data = spider_iso)
+```
+
+
+```{r}
+n_size_sim <- simulateResiduals(fittedModel = N_size_best, plot=T)
+```
+
+#### raw $\delta^{15}N$ ~ size Interpretions
+
+Body size does not seem to be determining trophic position measured by $\delta^{15}N$. This could be because smaller predators can take advantage of smaller predators and that smaller species which can be consumed by smaller individuals may also be predators. 
+
+# Next steps
+
+It may be a good idea to think about the SEAc values calculated by the `groupMetricsML()` function as a better value for determining uncertainty in measurements for capturing the values for both TA and CD described above in the metrics from Layman. Looks like *I think* this is the citation:
+https://besjournals.onlinelibrary.wiley.com/doi/full/10.1111/j.1365-2656.2011.01806.x
+
+`groupMetricsML()` requires that you create a `SIBER` object like you did before, so maybe if you can find those values, you can also run a model on those similar to the linear models performed above. 
+
+
+
+
+
+
+
