@@ -8,13 +8,7 @@
 
 # Load packages -----------------------------------------------------------
 
-package.list <- c("here", "tidyverse", 
-                  "SIBER", "glmmTMB",
-                  "MuMIn", "emmeans",
-                  "ggeffects", "DHARMa",
-                  "effects",
-                  "vegan", 
-                  "rKIN")
+package.list <- c("here", "tidyverse")
 
 ## Installing them if they aren't already on the computer
 new.packages <- package.list[!(package.list %in% installed.packages()[,"Package"])]

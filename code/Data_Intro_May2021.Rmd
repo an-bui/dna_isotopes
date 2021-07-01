@@ -270,6 +270,27 @@ How interesting is this? Would it benefit from other datasets?
 
 How novel/where do you think this would fit in a journal? There are quite a few isotope + DNA diet studies that I've seen with some sleuthing; however, it doesn't seem that many of them are going beyond "documenting diet" of a species of interest - though see the Kennedy et al. 2019 paper linked below for one that I think asks some cool evolutionary and ecological questions. 
 
+# Thoughts/notes from convos
+
+Dan: 
+Pull data from prey items from the Palmyra data and biplot their corrected isotope values too
+
+-	Maybe increases in food chain length happen at lower trophic levels, not the top trophic level…
+
+Common prey items for which we have isotope data:
+Diptera
+Hempitera
+Lepidoptera
+Araneae
+Orthoptera
+
+Could I also incorporate the DNA data from more spiders + the potential prey items I picked up somehow to answer these questions? Maybe top predators aren’t shifting their diets all that much but food chain length is increasing in the middle of the food web?
+
+Austen: 
+compare isotope and DNA dissimilarity via Mantel test? 
+
+dist(isotopes) ~ dist(diet) + dist(spider_phys) 
+
 # References and relevant papers I like
 
 Eckrich, C. A., Albeke, S. E., Flaherty, E. A., Bowyer, R. T., & Ben-David, M. (2020). rKIN: Kernel-based method for estimating isotopic niche size and overlap. Journal of Animal Ecology, 89(3), 757–771. [doi: 10.1111/1365-2656.13159](https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/1365-2656.13159)
