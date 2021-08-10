@@ -228,15 +228,25 @@ It doesn't seem like either isotope value is really shifting with body size? The
 ## 3. How does DNA diet shift with productivity and size?
 
 
-```{r}
+```{r, include = FALSE}
 ggplot(islet_prey2, aes(x = Order, y = percent, fill = Island)) +
   geom_col(position = position_dodge2(width = 0.9, preserve = "single")) +
   theme_bw() +
   coord_flip() +
   labs(x = "Frequency (percentage of samples)", y = "Prey Order") +
   scale_fill_manual(values = c("#80cdc1", "#8c510a", "#bf812d", "#01665e", "#001511")) +
-  facet_wrap(size_level~prod_level)
+  facet_wrap(~prod_level)
 ```
+
+```{r}
+ggplot(islet_prey2, aes(x = Order, y = percent, fill = prod_level)) +
+  geom_boxplot(space = 0, position = position_dodge(preserve = "single")) +
+  theme_bw() +
+  coord_flip() +
+  labs(y = "Frequency (percentage of samples)", x = "Prey Order") +
+  scale_fill_manual(values = c("#80cdc1", "#8c510a")) 
+```
+
 
 I'm not sure with these DNA data we will be able to do any islet size*productivity tests given that there are only 5 islets. Rather, perhaps it would be better to inform any exploration of these data on the results of the isotope and body size results and perhaps these data would remain a little more qualitative? Or - only selecting either islet size or productivity depending on the results of the above analyses. Also - I'm sure there could be some interesting composition analyses here - An, I could use your brilliant multivariate brain! 
 
@@ -278,13 +288,15 @@ Pull data from prey items from the Palmyra data and biplot their corrected isoto
 -	Maybe increases in food chain length happen at lower trophic levels, not the top trophic level…
 
 Common prey items for which we have isotope data:
-Diptera
-Hempitera
-Lepidoptera
-Araneae
-Orthoptera
+Diptera - 2009_Palmyra_Insect_Amphipod_Isopod_Isotopes
+Hempitera - 2010_Palmyra_Insect_Isotopes
+Lepidoptera - 2009_Palmyra_Insect_Amphipod_Isopod_Isotopes
+Araneae - 2010_Palmyra_Day_Spider_Isotopes.xlsx & 2012_Palmyra_Day_Spider_Isotopes.xlsx
+Orthoptera - 2010_Palmyra_Insect_Isotopes
 
 Could I also incorporate the DNA data from more spiders + the potential prey items I picked up somehow to answer these questions? Maybe top predators aren’t shifting their diets all that much but food chain length is increasing in the middle of the food web?
+
+  - this is challenging because i only have prey items from a few islands, and not at the ends of the spectrum. 
 
 Austen: 
 compare isotope and DNA dissimilarity via Mantel test? 

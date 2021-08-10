@@ -1,0 +1,84 @@
+---
+title: "Analyses_August2021"
+author: "Ana Miller-ter Kuile"
+date: "8/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(tidyverse)
+```
+
+Thanks so much for agreeing to help with this project! I honestly have no idea as to the level ("quality/novelty") of this project but I think it could be a good fit for a specific journal (e.g. Food Webs) or a mid-tier ecology journal (Biology Letters)? Anyway - as you look at the data maybe you can provide some insight on how to write this and for where! 
+
+# The questions
+
+This project would be building off previous work on Palmyra examining how ecosystem productivity and size influences food chain length using stable isotopes (Young et al. 2013). That study found that islet productivity (driven by seabird nutrient additions) shaped food chain length while islet size did not. The factors of islet size and productivity do not covary in this system.
+
+What we can add with this dataset is some idea of the mechanisms by which food chain length increases because we have several datasets for those same top predators from that study (*Heteropoda venatoria*) at the individual level, including stable isotope values ($\delta^{15}N$ and $\delta^{13}C$), body size, and diet DNA metabarcoding data for a subset of individuals. 
+
+I think the supplement from the 2013 paper provides a really nice visual of some of the mechanisms I think we can now try to answer, in part. 
+
+```{r, out.width = 100%}
+knitr::include_graphics(here("pictures", "mechanisms.png"))
+```
+
+Specifically, we can both add to the 2013 paper's thoughts on food chain length and broaden that to isotopic niche space (Layman et al. 2012) and ask:
+
+  1. Does islet productivity shift isotopic niche space (dataset: top predator isotope values)? 
+  
+    + If so, is this merely a shift up and down (mirroring the shifts in food chain length already observed) OR an expansion among individuals from the same environment, suggesting that in addition to eating higher on the food chain, top predators are also eating a broader variety of food items. 
+    
+Once we have answered that question, we can use some other datasets to ask some add-on questions about the mechanisms driving shifts in food chain length and/or isotopic niche space. These include:
+
+  2. **Mechanism One** *("Bigger Top Predators")*: Does islet productivity drive increases in top predator size, suggesting that increased resources allow predators to get to a size where they can access more resources. (dataset: top predator body size values)
+  
+    + (and tangentially, do larger predators have higher trophic positions based on $\delta^{15}N$ values?)
+    
+  3. **Mechanism Two** *("Top Predators Choose New Food")*: Does islet productivity correspond to different top predator prey communities (dataset: top predator diet DNA metabarcoding data)
+  
+  4. **Mechanism Three** *("Top Predator Prey Get More Predatory")*:	Do prey items shift their isotope values along the islet productivity, suggesting that lower trophic levels are shift with productivity, inflating top predator trophic values? (dataset: prey item isotope values)
+    
+    
+    
+    
+    
+    
+
+The questions I have thought of are along this vein:
+
+While it has been established that habitat productivity can increase food chain length (Young et al. 2013 paper and other similar literature), there are multiple mechanisms by which this could occur.
+
+1.	Predators may shift to new resources at higher trophic levels (niche size stays the same but shifts location)
+
+2.	Predators may become more general and feed across broader trophic groups (niche size expands beyond its current span)
+
+Multiple lines of evidence may help us understand how these niche shifts take place, or maybe their consequences (the cause-effect of body size-niche space is a little... I haven't come up with a good way to think about that yet):
+
+1.	Predators may become larger in size to access different resource pools or in response to more available resources at higher productivity.
+
+2.	We may be able to detect diet composition shifts alongside shifts in niche space (either expansions or shifts in space) that explain how predators respond to more productive environments. 
+
+*An aside and/or alternative framing: H. venatoria is an introduced predator species and so the framing/conclusions could be shaped by the species characteristics (e.g. diet/habitat generalism) that have allowed this species to be successful in new environments.*
+
+# The data
+
+As I mentioned above, we have multiple datasets to use for this project:
+
+1. Stable isotope data ($\delta^{15}N$ and $\delta^{13}C$) from 160 predator individuals from three separate sampling years (2009, 2012, and 2015) across 12 islets (6 high, 6 low productivity; 6 big, 6 small in area)
+
+2. Body size data (length and mass) for these same predator individuals
+
+3. DNA diet data (at Order level, so we could have more data) from 34 individuals (all from 2015) constituting 68 predator-prey pairs from five islets (3 high, 2 low productivity; 3 big, 2 small in area)
+
+Several of you helped collect these spiders, but for context: We collected these spiders opportunistically at night using eye shine. They represent the first 10-15 individuals observed on each islet during each sampling period. Importantly, as a result, while they do not represent the full size range of this species, they do represent the size distribution of those individuals of this species that are actively hunting in a similar habitat. (The juveniles of this species, just anecdotally, are often found in the canopy so there could be some really cool stage structure habitat partitioning for this species, but that's another project...)
+
+```{r, include = FALSE}
+library(here)
+
+source(here("code", "source_isotopes.R"))
+
+source(here("code", "source_DNA.R"))
+```

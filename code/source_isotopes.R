@@ -8,7 +8,7 @@
 
 # Load packages -----------------------------------------------------------
 
-package.list <- c("here", "tidyverse")
+package.list <- c("here", "tidyverse", "readxl", "lubridate")
 
 ## Installing them if they aren't already on the computer
 new.packages <- package.list[!(package.list %in% installed.packages()[,"Package"])]
@@ -21,10 +21,12 @@ for(i in package.list){library(i, character.only = T)}
 #spider isotope data
 spider_iso <- read.csv(here("data", 
                             "isotopes", 
+                            "preds",
                             "2009-2015_Cane Spider Isotopes.csv"))
 #plant isotope data
 plant_iso <- read.csv(here("data", 
                            "isotopes", 
+                           "baseline",
                            "2009-2012 Palmyra Plant Isotope Data.csv"))
 #spider size data
 spider_size <- read.csv(here("data", 
@@ -32,6 +34,7 @@ spider_size <- read.csv(here("data",
                              "Spider sizes 2009-2015.csv"))
 #island size and productivity
 islands <- read.csv(here('data', 
+                         "environmental",
                          "Island_data.csv"))
 
 # Tidy Isotope Data -------------------------------------------------------
