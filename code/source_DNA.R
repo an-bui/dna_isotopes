@@ -82,3 +82,17 @@ DNA_iso %>%
   distinct(Extraction.ID) %>%
   tally()
 
+DNA_matrix <- islet_prey2 %>%
+  ungroup() %>%
+  dplyr::select(Island, Order, Frequency) %>%
+  pivot_wider(names_from = Order,
+              values_from = Frequency,
+              values_fill = 0) %>%
+  column_to_rownames(var = "Island")
+
+DNA_metadata <- islet_prey2 %>%
+  ungroup() %>%
+  dplyr::select(prod_level, Island) %>%
+  distinct(prod_level, Island) %>%
+  column_to_rownames(var = "Island")
+

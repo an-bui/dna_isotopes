@@ -6,9 +6,21 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-library(here)
-library(tidyverse)
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE, 
+                      message = FALSE)
+
+package.list <- c("here", "tidyverse", 
+                  "patchwork", "glmmTMB",
+                  "effects", "DHARMa",
+                  "vegan")
+
+## Installing them if they aren't already on the computer
+new.packages <- package.list[!(package.list %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+## And loading them
+for(i in package.list){library(i, character.only = T)}
 ```
 
 Thanks so much for agreeing to help with this project! I honestly have no idea as to the level ("quality/novelty") of this project but I think it could be a good fit for a specific journal (e.g. Food Webs) or a mid-tier ecology journal (Biology Letters)? Anyway - as you look at the data maybe you can provide some insight on how to write this and for where! 
@@ -21,45 +33,25 @@ What we can add with this dataset is some idea of the mechanisms by which food c
 
 I think the supplement from the 2013 paper provides a really nice visual of some of the mechanisms I think we can now try to answer, in part. 
 
-```{r, out.width = 100%}
+```{r}
 knitr::include_graphics(here("pictures", "mechanisms.png"))
 ```
 
 Specifically, we can both add to the 2013 paper's thoughts on food chain length and broaden that to isotopic niche space (Layman et al. 2012) and ask:
 
-  1. Does islet productivity shift isotopic niche space (dataset: top predator isotope values)? 
+  1. **Does islet productivity shift isotopic niche space** (dataset: top predator isotope values)? 
   
-    + If so, is this merely a shift up and down (mirroring the shifts in food chain length already observed) OR an expansion among individuals from the same environment, suggesting that in addition to eating higher on the food chain, top predators are also eating a broader variety of food items. 
+    - If so, is this merely a shift up and down (mirroring the shifts in food chain length already observed) OR an expansion among individuals from the same environment, suggesting that in addition to eating higher on the food chain, top predators are also eating a broader variety of food items. 
     
 Once we have answered that question, we can use some other datasets to ask some add-on questions about the mechanisms driving shifts in food chain length and/or isotopic niche space. These include:
 
-  2. **Mechanism One** *("Bigger Top Predators")*: Does islet productivity drive increases in top predator size, suggesting that increased resources allow predators to get to a size where they can access more resources. (dataset: top predator body size values)
+  2. **Mechanism One** *("Top Predators Choose New Food")*: Does islet productivity correspond to different top predator prey communities (dataset: top predator diet DNA metabarcoding data)
+
+  3. **Mechanism Two** *("Bigger Top Predators")*: Does islet productivity drive increases in top predator size, suggesting that increased resources allow predators to get to a size where they can access more resources, even if these just include the same prey at a larger body size. (dataset: top predator body size values)
   
-    + (and tangentially, do larger predators have higher trophic positions based on $\delta^{15}N$ values?)
-    
-  3. **Mechanism Two** *("Top Predators Choose New Food")*: Does islet productivity correspond to different top predator prey communities (dataset: top predator diet DNA metabarcoding data)
+    - (and tangentially, do larger predators have higher trophic positions based on $\delta^{15}N$ values?)
   
   4. **Mechanism Three** *("Top Predator Prey Get More Predatory")*:	Do prey items shift their isotope values along the islet productivity, suggesting that lower trophic levels are shift with productivity, inflating top predator trophic values? (dataset: prey item isotope values)
-    
-    
-    
-    
-    
-    
-
-The questions I have thought of are along this vein:
-
-While it has been established that habitat productivity can increase food chain length (Young et al. 2013 paper and other similar literature), there are multiple mechanisms by which this could occur.
-
-1.	Predators may shift to new resources at higher trophic levels (niche size stays the same but shifts location)
-
-2.	Predators may become more general and feed across broader trophic groups (niche size expands beyond its current span)
-
-Multiple lines of evidence may help us understand how these niche shifts take place, or maybe their consequences (the cause-effect of body size-niche space is a little... I haven't come up with a good way to think about that yet):
-
-1.	Predators may become larger in size to access different resource pools or in response to more available resources at higher productivity.
-
-2.	We may be able to detect diet composition shifts alongside shifts in niche space (either expansions or shifts in space) that explain how predators respond to more productive environments. 
 
 *An aside and/or alternative framing: H. venatoria is an introduced predator species and so the framing/conclusions could be shaped by the species characteristics (e.g. diet/habitat generalism) that have allowed this species to be successful in new environments.*
 
@@ -73,7 +65,9 @@ As I mentioned above, we have multiple datasets to use for this project:
 
 3. DNA diet data (at Order level, so we could have more data) from 34 individuals (all from 2015) constituting 68 predator-prey pairs from five islets (3 high, 2 low productivity; 3 big, 2 small in area)
 
-Several of you helped collect these spiders, but for context: We collected these spiders opportunistically at night using eye shine. They represent the first 10-15 individuals observed on each islet during each sampling period. Importantly, as a result, while they do not represent the full size range of this species, they do represent the size distribution of those individuals of this species that are actively hunting in a similar habitat. (The juveniles of this species, just anecdotally, are often found in the canopy so there could be some really cool stage structure habitat partitioning for this species, but that's another project...)
+4. Stable isotope data ($\delta^{15}N$ and $\delta^{13}C$) from islet-level pooled samples of six prey orders detected in DNA diet (197 pooled samples total).
+
+Several of you helped collect these spiders, but for context: We collected these spiders opportunistically at night using eye shine. They represent the first 10-15 individuals observed on each islet during each sampling period. Importantly, as a result, while they do not represent the full size range of this species, they do represent the size distribution of those individuals of this species that are actively hunting in a similar habitat. (The juveniles of this species, just anecdotally, are often found in the canopy so there could be some really cool stage structure habitat partitioning for this species, but that's another project that we can't approach with the current dataset...)
 
 ```{r, include = FALSE}
 library(here)
@@ -81,4 +75,321 @@ library(here)
 source(here("code", "source_isotopes.R"))
 
 source(here("code", "source_DNA.R"))
+
+source(here("code", "source_preyisotopes.R"))
+
+source(here("code", "isotope_niches.R"))
 ```
+
+
+## 1. Does islet productivity shift isotopic niche space?
+
+We could think that higher productivity would allow predator populations to have greater individual variation, such that each individual was able to establish a more distinct isotopic niche in a more productive environment. However, though we observe a clear distinction in isotopic trophic level (measured by $\delta^{15}N$) values, see Young et al. 2013 as well) and a shift in $\delta^{13}C$ (a more 'terrestrial' signature on higher productivity islets), we do not see a clear shift in the isotopic niche space occupied by top predators on high versus low productivity habitat patches.
+
+```{r}
+spider_iso %>%
+  mutate(Island = factor(Island, 
+                         levels = c("Aviation", "Castor", "Fern",
+                                    "Holei","Kaula", "Paradise", 
+                                    "Dudley", "Eastern", "Frigate",
+                                    "Leslie", "Lost", "Sand"))) %>%
+  filter(!is.na(prod_level)) %>%
+  #filter(Year != 2009) %>%
+  ggplot(aes(x = d13C, y = d15N_c, level = prod_level)) +
+  #stat_ellipse(size = 1, alpha = 0.6) +
+  stat_ellipse(aes(color = Island), size = 1) +
+  geom_point(aes(shape = prod_level, color = Island), size = 4) +
+  labs(x = expression({delta}^13*C~ ('\u2030')), 
+       y = expression({delta}^15*N~ ('\u2030'))) +
+  scale_color_manual(values = c("#2D1A03", "#543005", 
+                                "#8c510a","#bf812d",
+                                "#dfc27d", "#f6e8c3", "#c7eae5",
+                                "#80cdc1", "#35978f", "#01665e", 
+                                "#003c30", "#001511")) +
+  theme_bw() 
+
+```
+
+Those isotopic niche areas measured:
+
+```{r}
+ggplot(kernel_ellipse_95, aes(x = Method, y = ShapeArea, fill = prod_level)) +
+  geom_boxplot() +
+  labs(y = "95% isotopic niche area", 
+       x = "Isotopic niche method",
+       fill = "Islet productivity") +
+  scale_fill_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  theme_bw()
+```
+
+```{r, eval= FALSE}
+m1 <- glm(ShapeArea ~ prod_level, 
+              data = ker95)
+
+summary(m1)
+
+simulateResiduals(m1, plot = T)
+
+m2 <- glm(ShapeArea ~ prod_level, 
+              data = ell95)
+
+summary(m2)
+simulateResiduals(m2, plot = T)
+```
+
+
+```{r}
+d15Nplot <- ggplot(spider_iso, aes(x = prod_level, y = d15N_c, fill = prod_level)) +
+  geom_boxplot(size =1, alpha = 0.6) +
+  geom_point(aes(color = prod_level), 
+             position=position_jitterdodge()) +
+  theme_bw() +  
+  labs(y = expression({delta}^15*N~ ('\u2030')), 
+       x = "Islet productivity",
+       fill = "Islet productivity") +
+  scale_fill_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  scale_color_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  theme(legend.position = "none",
+        axis.text.x = element_blank(),
+        axis.title.x = element_blank())
+```
+
+```{r}
+d13C_plot <- ggplot(spider_iso, aes(x = prod_level, y = d13C, fill = prod_level)) +
+  geom_boxplot(size = 1, alpha = 0.6) +
+  geom_point(aes(color = prod_level), 
+             position=position_jitterdodge()) +
+  theme_bw() +  
+  labs(y = expression({delta}^13*C~ ('\u2030')), 
+       x = "Islet productivity",
+       fill = "Islet productivity") +
+  scale_fill_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  scale_color_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  theme(legend.position = "none")
+```
+
+
+```{r}
+d15Nplot / d13C_plot
+```
+
+
+```{r, eval = FALSE}
+m3 <- glm(d15N_c ~ prod_level, data = spider_iso)
+summary(m3)
+simulateResiduals(m3, plot = T)
+
+m4 <- glm(d13C ~ prod_level, data = spider_iso)
+summary(m4)
+simulateResiduals(m4, plot = T)
+plot(allEffects(m4))
+```
+
+
+### 1. Conclusions
+
+Top predators increase their trophic positions (measured by $\delta^{15}N$) and the base of their resources (measured by $\delta^{13}C$), but don't seem to be broadening their isotopic niche space (variety of resources). We would then assume that predators are eating higher on the food chain on high-productivity islets, and perhaps more terrestrially, and then the question becomes: what allows them to do so?
+
+## 2. Mechanism One: "Top Predators Choose New Food"
+
+The most straightforward mechanism of why top predators are higher on the food chain is that they are choosing new food items in higher-resource environments. Given that their niche space shifts upward but does not expand, we would expect this to perhaps look like a complete shift from one prey community to another, such that their prey become more predatory themselves on high-productivity islets.
+
+When we look at diet DNA metabarcoding data from these predator individuals, we see that there is no clear difference in their diets across high versus low productivity environment (PERMANOVA based on Bray-Curtis dissimilarity, p-value = 0.3)
+
+```{r}
+islet_prey2 %>%
+  group_by(prod_level, Order) %>%
+  summarise(mean = mean(percent, na.rm = T),
+            sd = sd(percent, na.rm = T),
+            total = n(),
+            se = sd/sqrt(total)) %>%
+  ggplot(aes(x = Order, y = mean, fill = prod_level)) +
+  geom_bar(color = "black", stat = "identity", position = position_dodge(preserve = "single")) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2,
+                 position=position_dodge(width = .9, preserve = "single")) +
+  theme_bw() + 
+  labs(y = "Frequency (percentage of samples)", x = "Prey Order") +
+  scale_fill_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r, eval = FALSE}
+adonis(DNA_matrix ~ prod_level, data = DNA_metadata, method="bray",nperm=999)
+```
+
+
+### 2. Conclusions
+
+What it seems like is that predators are not really shifting their diets much across environmental contexts. Could this be, then, that predators are either getting bigger and so possibly eating bigger (maybe higher trophic position) prey of the same species (**Mechanism Two**, below), or, that the prey items themselves are becoming higher trophic position in higher resource environments. So, the expansion of the food chain is happening somewhere before the top predators get into the scene with increased omnivory at intermediate trophic levels (**Mechanism Three**, below).
+
+## 3. Mechanism Two: "Bigger Top Predators"
+
+Another mechanism of change in top predator trophic position may be that top predators are getting larger when there are more resources, and thus, able to consume larger individuals of the same prey items that themselves are higher on the food chain.
+
+```{r}
+spider_iso %>%
+  mutate(mass_mg = Mass_g*100) %>%
+ggplot(aes(x = prod_level, y = mass_mg, fill = prod_level)) +
+  geom_boxplot(size = 1, alpha = 0.6) +
+  geom_point(aes(color = prod_level), 
+             position=position_jitterdodge()) +
+  labs(x = "Productivity level", y = "Mass (mg)") +
+  scale_color_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  scale_fill_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  theme_bw()
+```
+
+
+```{r, eval = FALSE}
+spider_iso <- spider_iso %>%
+  mutate(log10_mass = log10(Mass_g))
+
+model <- glmmTMB(log10_mass ~ prod_level + (1|Island), data = spider_iso)
+summary(model)
+simulateResiduals(model, plot = T)
+```
+
+However, we find no clear difference in mass of individuals across habitat productivity.
+
+Furthermore, there is no clear evidence that larger individuals even are higher on the food chain:
+
+```{r}
+spider_iso %>%
+  mutate(Mass_mg = 100*Mass_g) %>%
+ggplot(aes(x = Mass_mg, y = d15N_c, color = prod_level)) +
+  geom_point(size = 3) +
+  #geom_smooth(method = "lm", se = F) +
+  scale_color_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  theme_bw() +
+  labs(x = "Mass (mg)", y = expression({delta}^15*N~ ('\u2030'))) 
+```
+
+```{r, eval = FALSE}
+#this is breaking :(
+spider_iso <- spider_iso %>%
+  mutate(log10_mass = log10(Mass_g))
+
+model3 <- glmmTMB(d15N_c ~ Mass_g + (1|Island), data = spider_iso)
+summary(model3)
+simulateResiduals(model3, plot = T)
+```
+
+### 3. Conclusions
+
+There seems to be no clear evidence that top predators are reaching larger sizes (or that size is even correlated to trophic position) in higher resource environments. 
+
+## 4. Mechanism Three: "Top Predator Prey Get More Predatory"
+
+The final mechanism could be that while top predators continue to eat the same prey source, that prey source has become more omnivorous - driving increases in food chain length in the intermediate/middle of the food chain as opposed to the top of the food chain. What we see is a clear increase in prey trophic position (based on $\delta^{15}CN$) in more productive environments, suggesting that increases in food chain length are happening due to increased omnivory in the middle of the food chain as opposed to increased consumption of other predators at the top of the food chain.
+
+```{r}
+ggplot(prey_iso, aes(x = Order, y = d15N_c, fill = prod_level)) +
+  geom_boxplot(size = 1, alpha = 0.6) +
+  geom_point(aes(color = prod_level), 
+             position=position_jitterdodge()) +
+  labs(fill = "Productivity level", y = expression({delta}^15*N~ ('\u2030'))) +
+  scale_color_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  scale_fill_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  theme_bw()
+```
+
+```{r}
+ggplot(prey_iso, aes(x = Order, y = d13C, fill = prod_level)) +
+  geom_boxplot(size = 1, alpha = 0.6) +
+  geom_point(aes(color = prod_level), 
+             position=position_jitterdodge()) +
+  labs(fill = "Productivity level", y = expression({delta}^13*C~ ('\u2030'))) +
+  scale_color_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  scale_fill_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  theme_bw()
+```
+
+```{r, eval = FALSE}
+model2 <- glmmTMB(d15N_c ~ prod_level + (1|Order), data = prey_iso)
+summary(model2)
+simulateResiduals(model2, plot= T)
+plot(allEffects(model2))
+
+#this model is a bit ugly
+model4 <- glmmTMB(d13C ~ prod_level + (1|Order), data = prey_iso)
+summary(model4)
+simulateResiduals(model4, plot= T)
+plot(allEffects(model4))
+```
+
+```{r}
+ggplot(prey_iso, aes(x = prod_level, y = d15N_c, fill = prod_level)) +
+  geom_boxplot(size = 1, alpha = 0.6) +
+  geom_point(aes(color = prod_level), 
+             position=position_jitterdodge()) +
+  labs(x = "Productivity level", y = expression({delta}^15*N~ ('\u2030'))) +
+  scale_color_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  scale_fill_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+```{r}
+ggplot(prey_iso, aes(x = prod_level, y = d13C, fill = prod_level)) +
+  geom_boxplot(size = 1, alpha = 0.6) +
+  geom_point(aes(color = prod_level), 
+             position=position_jitterdodge()) +
+  labs(x = "Productivity level", y = expression({delta}^13*C~ ('\u2030'))) +
+  scale_color_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  scale_fill_manual(values = c("#80cdc1",
+                               "#bf812d")) +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+### 4. Conclusions
+
+This final mechanism seems to have the most promising evidence, suggesting that food chain lengths grow in the middle in this environment, as opposed to at the top. In addition, these findings suggest that prey are shifting their food sources, as opposed to top predators.
+
+# Why do we care?
+
+I don't know!
+
+# References and relevant papers I like
+
+Eckrich, C. A., Albeke, S. E., Flaherty, E. A., Bowyer, R. T., & Ben-David, M. (2020). rKIN: Kernel-based method for estimating isotopic niche size and overlap. Journal of Animal Ecology, 89(3), 757–771. [doi: 10.1111/1365-2656.13159](https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/1365-2656.13159)
+
+   - Newest methods in determining isotopic niche space.
+
+Eitzinger, B., Abrego, N., Gravel, D., Huotari, T., Vesterinen, E. J., & Roslin, T. (2019). Assessing changes in arthropod predator–prey interactions through DNA-based gut content analysis—variable environment, stable diet. Molecular Ecology, 28(2), 266–280. [doi: 10.1111/mec.14872](https://onlinelibrary.wiley.com/doi/abs/10.1111/mec.14872)
+
+  - Documented diet of a spider using DNA across environments, showing that composition stayed the same despite very different environmental conditions.
+
+Kennedy, S., Lim, J. Y., Clavel, J., Krehenwinkel, H., & Gillespie, R. G. (2019). Spider webs, stable isotopes and molecular gut content analysis: Multiple lines of evidence support trophic niche differentiation in a community of Hawaiian spiders. Functional Ecology, 33(9), 1722–1733. [doi: 10.1111/1365-2435.13361](https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/1365-2435.13361)
+
+  - Looked at a radiation of *Tetragnatha* (genus) spiders in Hawai'i where half of the species have a different hunting strategy from the other half and showed cool shifts in isotope and DNA diet (at Order leve) across these two halves of the clade. 
+
+Layman, C. A., Araujo, M. S., Boucek, R., Hammerschlag-Peyer, C. M., Harrison, E., Jud, Z. R., … Bearhop, S. (2012). Applying stable isotopes to examine food-web structure: An overview of analytical tools. Biological Reviews, 87(3), 545–562. [doi: 10.1111/j.1469-185X.2011.00208.x](https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1469-185X.2011.00208.x)
+
+  - The foundational isotopic niche space paper, though I think the rKIN methods are a bit more relevant now.
+
+Nigro, K. M., Hathaway, S. A., Wegmann, A. S., Miller-ter Kuile, A., Fisher, R. N., & Young, H. S. (2017). Stable isotope analysis as an early monitoring tool for community-scale effects of rat eradication. Restoration Ecology, 25(6), 1015–1025. [doi: 10.1111/rec.12511](https://onlinelibrary.wiley.com/doi/abs/10.1111/rec.12511)
+
+  - A paper from Palmyra on land crab isotope shifts pre-post rat eradication.
+
+Young, H. S., McCauley, D. J., Dunbar, R. B., Hutson, M. S., Ter-Kuile, A. M., & Dirzo, R. (2013). The roles of productivity and ecosystem size in determining food chain length in tropical terrestrial ecosystems. Ecology, 94(3), 692–701. [doi: 10.1890/12-0729.1](https://esajournals.onlinelibrary.wiley.com/doi/abs/10.1890/12-0729.1)
+
+  - The paper from Palmyra showing shifts in trophic position of predators using stable isotopes with increased islet productivity, but not islet size. This paper used an pooled value of each predator species per islet rather than individual-level diet or isotope data. 
+
+
