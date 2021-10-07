@@ -17,6 +17,11 @@ if(length(new.packages)) install.packages(new.packages)
 ## And loading them
 for(i in package.list){library(i, character.only = T)}
 
+#for function to get trophic position with correction function
+source(here("code",
+            "source",
+            "tidy_functions.R"))
+
 # Load Data ---------------------------------------------------------------
 #spider isotope data
 spider_iso <- read.csv(here("data", 
@@ -58,7 +63,22 @@ plant_iso_2 <- plant_iso %>%
                             Island.name == "NS Causeway" ~ "NSCauseway",
                             TRUE ~ Island.name)) %>%
   group_by(Island.name) %>%
-  summarise(plant_d15N = mean(d15N))
+  summarise(plant_d15N = mean(d15N),
+            plant_d13C = mean(d13C))
+
+# using the plant isotopes (which includes the marine as well)
+# get a baseline for marine wrack
+marine_iso <- plant_iso %>%
+  filter(Species %in% c("Algae", "homog-cladoph",
+                        "turf algae-v", "turf algae-homo")) %>%
+  summarise(marine_d15N = mean(d15N),
+            marine_d13C = mean(d13C))
+
+guano_iso <- plant_iso %>%
+  filter(Species == "Guano") %>%
+  summarise(guano_d15N = mean(d15N, na.rm = T),
+            guano_d13C = mean(d13C, na.rm = T))
+  
 
 #categorize islet size and productivity into high/low, big/small
 islands <- islands %>%
@@ -95,7 +115,14 @@ spider_size2 <- spider_size %>%
 spider_iso <- spider_iso %>%
   dplyr::select(Island, ID, d15N, d13C, Year) %>%
   left_join(plant_iso_2, by = c("Island" = "Island.name")) %>%
-  mutate(d15N_c = d15N - plant_d15N) %>%
+  cbind(marine_iso) %>%
+  cbind(guano_iso) %>%
+  mutate(d15N_c = isotope_correction(d15_plant = plant_d15N,  
+                                     d13_plant = plant_d13C,
+                                     d15_marine = marine_d15N, 
+                                     d13_marine = marine_d15N,
+                                     d15_consumer = d15N, 
+                                     d13_consumer = d13C)) %>%
   filter(!Island %in% c("Ainsley", "Whipoorwill", "Home")) %>%
   filter(!is.na(plant_d15N)) %>%
   left_join(islands, by = "Island") %>%

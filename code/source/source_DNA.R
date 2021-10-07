@@ -12,7 +12,9 @@
 
 library(here)
 
-source(here("code", "source_isotopes.R"))
+source(here("code", 
+            "source", 
+            "source_isotopes.R"))
 
 # Load DNA Data -----------------------------------------------------------
 #DNA interaction data
@@ -82,17 +84,19 @@ DNA_iso %>%
   distinct(Extraction.ID) %>%
   tally()
 
-DNA_matrix <- islet_prey2 %>%
+DNA_matrix <- DNA_iso %>%
   ungroup() %>%
-  dplyr::select(Island, Order, Frequency) %>%
+  dplyr::select(Extraction.ID, Order, presence) %>%
   pivot_wider(names_from = Order,
-              values_from = Frequency,
+              values_from = presence,
               values_fill = 0) %>%
-  column_to_rownames(var = "Island")
+  column_to_rownames(var = "Extraction.ID")
 
-DNA_metadata <- islet_prey2 %>%
+DNA_metadata <- DNA_iso %>%
   ungroup() %>%
-  dplyr::select(prod_level, Island) %>%
-  distinct(prod_level, Island) %>%
-  column_to_rownames(var = "Island")
+  dplyr::select(Extraction.ID, prod_level, Island) %>%
+  distinct(prod_level, Island, Extraction.ID) %>%
+  column_to_rownames(var = "Extraction.ID")
 
+adonis(DNA_matrix ~ prod_level, data = DNA_metadata,
+       method = "jaccard", nperm = 999)

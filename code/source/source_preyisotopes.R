@@ -21,7 +21,7 @@ for(i in package.list){library(i, character.only = T)}
 # this script will use some datasets imported in the top predator isotope
 # data
 
-source(here("code", "source_isotopes.R"))
+source(here("code", "source", "source_isotopes.R"))
 
 #datasets needed from here islands, plant_iso 
 
@@ -177,8 +177,15 @@ prey_iso <- prey_iso %>%
 
 #join with plant and island datasets
 prey_iso <- prey_iso %>%
-  left_join(plant_iso_2, by = c("Island" = "Island.name")) %>%
-  mutate(d15N_c = d15N - plant_d15N) %>%
+  left_join(plant_iso_2, by = c("Island" = "Island.name"))  %>%
+  cbind(marine_iso) %>%
+  cbind(guano_iso) %>%
+  mutate(d15N_c = isotope_correction(d15_plant = plant_d15N,  
+                                     d13_plant = plant_d13C,
+                                     d15_marine = marine_d15N, 
+                                     d13_marine = marine_d15N,
+                                     d15_consumer = d15N, 
+                                     d13_consumer = d13C)) %>%
   filter(!is.na(plant_d15N)) %>%
   left_join(islands, by = "Island") %>%
   filter(!is.na(prod_level))

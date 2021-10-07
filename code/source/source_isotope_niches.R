@@ -17,7 +17,9 @@ for(i in package.list){library(i, character.only = T)}
 
 # Load Data ---------------------------------------------------------------
 
-source(here("code", "source_isotopes.R"))
+source(here("code", 
+            "source", 
+            "source_isotopes.R"))
 
 # Tidy --------------------------------------------------------------------
 
