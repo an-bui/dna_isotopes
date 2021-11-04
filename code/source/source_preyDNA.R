@@ -111,8 +111,6 @@ library(vegan)
 
 adonis(preyDNA_matrix ~ category, data = DNA_metadata,
        method = "jaccard", nperm = 999)
-
-  
-  
-  
-  
+install.packages("betapart")
+library(betapart)
+beta.multi(preyDNA_matrix, index.family = "jaccard")  
