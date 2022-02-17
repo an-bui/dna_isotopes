@@ -100,3 +100,13 @@ DNA_metadata <- DNA_iso %>%
 
 adonis(DNA_matrix ~ prod_level, data = DNA_metadata,
        method = "jaccard", nperm = 999)
+
+beta.multi(DNA_matrix, index.family = "jaccard")  
+dist<-beta.pair(DNA_matrix, index.family="jaccard")
+
+p <- betadisper(dist[[1]], DNA_metadata$prod_level)
+plot(p)
+p2 <- betadisper(dist[[2]], DNA_metadata$prod_level)
+plot(p2)
+p3 <- betadisper(dist[[3]], DNA_metadata$prod_level)
+plot(p3)
