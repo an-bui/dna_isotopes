@@ -9,8 +9,14 @@
 
 # Load packages and source ------------------------------------------------
 
-library(here)
-library(tidyverse)
+package.list <- c("here", "tidyverse")
+
+## Installing them if they aren't already on the computer
+new.packages <- package.list[!(package.list %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+## And loading them
+for(i in package.list){library(i, character.only = T)}
 
 # Load DNA Data -----------------------------------------------------------
 #DNA interaction data
@@ -24,12 +30,12 @@ DNA_meta <- read.csv(here("data",
                           "Sample_metadata.csv"))
 
 # Tidy DNA Data -----------------------------------------------------------
-#filter out just the cane spiders and
+#filter out just the intermediate predators of interest
 # variables of interest, change ID name and make a presence column
 # remove all zero interactions
-DNA_prey <- DNA %>%
-  filter(sample_str %in% c("NEO", "LRS", "SCY")) %>%
-  filter(Order != "Primates") %>%
+DNA_int <- DNA %>%
+  filter(sample_str %in% c("NEO", "SCY", "LRS")) %>%
+  filter(Class != "Mammalia") %>%
   filter(ID_level %in% c("Order", "Family", "Genus", "Species")) %>%
   filter(reads > 0) %>%
   dplyr::select(sample, 
@@ -41,61 +47,64 @@ DNA_prey <- DNA %>%
   summarise(reads = sum(reads)) %>%
   mutate(presence = 1)
 
-# get only cane spider data and get distinct and consistent
+# get only intermediate predator data and get distinct and consistent
 # naming of samples
-DNA_preymeta <- DNA_meta %>%
-  filter(ID %in% c("Keijia mneon",
-                   "Scytodes longipes",
-                   "Neoscona theisi")) %>% #& Year == 2015) %>%
+DNA_intmeta <- DNA_meta %>%
+  filter(ID %in% c("Scytodes longipes",
+                   "Neoscona theisi",
+                   "Keijia mneon")) %>% #& Year == 2015) %>%
   group_by(Island, Habitat, Extraction.ID, ID) %>%
   summarise(Length_mm = mean(Length_mm, na.rm = TRUE)) %>%
   mutate(category = case_when(Habitat %in% c("PF", "PG", "TA") ~ "high",
                             TRUE ~ "low"))
 
 #combine DNA data with metadata
-DNA_preyfull <- DNA_prey %>%
+DNA_intfull <- DNA_int %>%
   full_join(DNA_preymeta, by = c("sample" = "Extraction.ID")) %>%
   mutate(category = case_when(Habitat %in% c("PF", "PG", "TA") ~ "high",
                               TRUE ~ "low")) %>%
-  filter(!is.na(Order))
+  filter(!is.na(Order)) %>%
+  filter(Habitat != "TA")
+
+#get stats
+DNA_intfull %>%
+  ungroup() %>%
+  distinct(sample) %>%
+  tally()
+
+DNA_intfull %>%
+  distinct(sample, Habitat) %>%
+  group_by(Habitat) %>%
+  tally()
+
+DNA_intfull %>%
+  group_by(Habitat) %>%
+  tally()
+
+# Barplot visualization DFs -----------------------------------------------
 
 #get frequency of different kinds of prey of prey by habitat cateogry
-habitat_prey <- DNA_preyfull %>%
+habitat_int <- DNA_intfull %>%
   group_by(Class, Order, category) %>%
   summarise(Frequency = n())
 
-sample_size <- DNA_preyfull %>%
+#figure out sample size
+sample_size_int <- DNA_intfull %>%
   ungroup() %>%
   distinct(sample,  category) %>%
   group_by(category) %>%
   tally(name = "sample_sz") 
 
-habitat_prey2 <- habitat_prey %>%
-  left_join(sample_size, by = c("category")) %>%
+#get % of pop that eats that thing
+habitat_int2 <- habitat_int %>%
+  left_join(sample_size_int, by = c("category")) %>%
   mutate(percent = Frequency/sample_sz)
 
-habitat_prey2 %>%
-  mutate(trophic = case_when(Order %in% c("Araneae") ~ "Predators",
-                             Order %in% c("Sarcoptiformes",
-                                          "Entomobryomorpha",
-                                          "Blattodea",
-                                          "Coleoptera",
-                                          "Diptera",
-                                          "Hymenoptera",
-                                          "Lepidoptera",     
-                                          "Orthoptera",
-                                          "Psocoptera",
-                                          "Thysanoptera") ~ "Omnivores",
-                             TRUE ~ "Herbivores")) %>%
-ggplot(aes(x = Order, y = percent, fill = category)) +
-  geom_bar(stat = "identity", 
-           position = position_dodge2(width = 0.9, preserve = "single")) +
-  theme_bw() +
-  facet_grid(~ trophic, scales = "free_x", space = "free") +
-  theme(axis.text.x = element_text(angle = 90, hjust= 1))
 
+# Matrix and metadata for community analyses ------------------------------
 
-preyDNA_matrix <- DNA_preyfull %>%
+#matrix of prey items by samples (predators)
+intDNA_matrix <- DNA_intfull %>%
   ungroup() %>%
   dplyr::select(sample, Order, presence) %>%
   pivot_wider(names_from = Order,
@@ -103,24 +112,9 @@ preyDNA_matrix <- DNA_preyfull %>%
               values_fill = 0) %>%
   column_to_rownames(var = "sample")
 
-DNA_metadata <- DNA_preyfull %>%
+#metadata associated with these samples for adonis and betapart
+DNA_intmetadata <- DNA_intfull %>%
   ungroup() %>%
-  distinct(sample, category, ID) %>%
+  distinct(sample, category, Habitat, ID) %>%
   column_to_rownames(var = "sample")
-library(vegan)
 
-adonis(preyDNA_matrix ~ category, data = DNA_metadata,
-       method = "jaccard", nperm = 999)
-install.packages("betapart")
-library(betapart)
-dist<-beta.pair(preyDNA_matrix, index.family="jaccard")
-
-p <- betadisper(dist[[1]], DNA_metadata$category)
-plot(p)
-anova(p)
-p2 <- betadisper(dist[[2]], DNA_metadata$category)
-plot(p2)
-anova(p2)
-p3 <- betadisper(dist[[3]], DNA_metadata$category)
-boxplot(p3)
-plot(p3)

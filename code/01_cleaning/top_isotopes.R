@@ -19,14 +19,14 @@ for(i in package.list){library(i, character.only = T)}
 
 #for function to get trophic position with correction function
 source(here("code",
-            "source",
+            "00_functions",
             "tidy_functions.R"))
 
 # Load Data ---------------------------------------------------------------
 #spider isotope data
 spider_iso <- read.csv(here("data", 
                             "isotopes", 
-                            "preds",
+                            "top",
                             "2009-2015_Cane Spider Isotopes.csv"))
 #plant isotope data
 plant_iso <- read.csv(here("data", 
@@ -128,6 +128,9 @@ spider_iso <- spider_iso %>%
   left_join(islands, by = "Island") %>%
   left_join(spider_size2, by = c("Island", "ID", "Year"))
 
+spider_iso %>%
+  group_by(prod_level) %>%
+  tally()
 
 
 

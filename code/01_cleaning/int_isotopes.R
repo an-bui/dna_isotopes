@@ -21,7 +21,9 @@ for(i in package.list){library(i, character.only = T)}
 # this script will use some datasets imported in the top predator isotope
 # data
 
-source(here("code", "source", "source_isotopes.R"))
+source(here("code", 
+            "01_cleaning", 
+            "top_isotopes.R"))
 
 #datasets needed from here islands, plant_iso 
 
@@ -29,7 +31,7 @@ source(here("code", "source", "source_isotopes.R"))
 
 files <- list.files(here("data", 
                          "isotopes",
-                         "prey"),
+                         "int"),
                     pattern = "*.xlsx",
                     full.names = TRUE)
 
@@ -65,7 +67,7 @@ spiders_12 <- data_list[[4]] %>%
   dplyr::select(Organism, Year, Island,
                 d15N, d13C)
 
-prey_iso <- bind_rows(bugs_09, bugs_10, spiders_10, spiders_12)
+int_iso <- bind_rows(bugs_09, bugs_10, spiders_10, spiders_12)
   
 #Diptera - 2009_Palmyra_Insect_Amphipod_Isopod_Isotopes
 #Hempitera - 2010_Palmyra_Insect_Isotopes
@@ -75,10 +77,10 @@ prey_iso <- bind_rows(bugs_09, bugs_10, spiders_10, spiders_12)
 
 # All data cleaning -------------------------------------------------------
 
-unique(prey_iso$Organism)
+unique(int_iso$Organism)
 
 #give organisms an order level ID
-prey_iso <- prey_iso %>%
+int_iso <- int_iso %>%
   mutate(Order = case_when(Organism == "ant" ~ "Hymenoptera",
                            Organism == "diptera" ~ "Diptera",
                            Organism == "moth" ~ "Lepidoptera",
@@ -88,10 +90,12 @@ prey_iso <- prey_iso %>%
                            Organism %in% c("Neoscona theisi", "Salticidae", 
                                            "Smeringopus pallidus", 
                                            "Scytodes sp.") ~ "Araneae",
-                           TRUE ~ NA_character_))
+                           TRUE ~ NA_character_)) %>%
+  filter(Order == "Araneae") #select only Araneae for analyses to be
+#consistent with DNA data
 
 # make island naming convention consistent with islands dataset
-prey_iso <- prey_iso %>%
+int_iso <- int_iso %>%
   mutate(Island = case_when(Island %in% c("Papala", "Papala PG/TA",
                                           "Papala TA",
                                           "Papala PS",
@@ -176,7 +180,7 @@ prey_iso <- prey_iso %>%
                             TRUE ~ NA_character_))
 
 #join with plant and island datasets
-prey_iso <- prey_iso %>%
+int_iso <- int_iso %>%
   left_join(plant_iso_2, by = c("Island" = "Island.name"))  %>%
   cbind(marine_iso) %>%
   cbind(guano_iso) %>%
@@ -189,4 +193,8 @@ prey_iso <- prey_iso %>%
   filter(!is.na(plant_d15N)) %>%
   left_join(islands, by = "Island") %>%
   filter(!is.na(prod_level))
- 
+
+#get stats
+int_iso %>%
+  group_by(prod_level) %>%
+  tally()

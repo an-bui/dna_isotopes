@@ -10,11 +10,22 @@
 
 # Load packages and source ------------------------------------------------
 
-library(here)
+package.list <- c("here", "tidyverse")
 
+## Installing them if they aren't already on the computer
+new.packages <- package.list[!(package.list %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+## And loading them
+for(i in package.list){library(i, character.only = T)}
+
+
+# Load source data --------------------------------------------------------
+
+#we'll combine DNA and isotope data?
 source(here("code", 
-            "source", 
-            "source_isotopes.R"))
+            "01_cleaning", 
+            "top_isotopes.R"))
 
 # Load DNA Data -----------------------------------------------------------
 #DNA interaction data
@@ -66,6 +77,10 @@ DNA_iso <- spider_iso %>%
                 -size_level) %>%
   left_join(islands, by = "Island")
 
+
+# Bar graph visualization DFs ---------------------------------------------
+
+
 #get frequency of different kinds of prey by islet populations
 islet_prey <- DNA_iso %>%
   group_by(Island, prod_level, size_level, Class, Order) %>%
@@ -80,9 +95,19 @@ islet_prey2 <- islet_prey %>%
   left_join(sample_size, by = "Island") %>%
   mutate(percent = Frequency/sample_sz)
 
+#get stats
 DNA_iso %>%
   distinct(Extraction.ID) %>%
   tally()
+
+DNA_iso %>%
+  distinct(Extraction.ID, prod_level) %>%
+  group_by(prod_level) %>%
+  tally()
+
+
+# Community analyses matrices ---------------------------------------------
+
 
 DNA_matrix <- DNA_iso %>%
   ungroup() %>%
@@ -98,15 +123,3 @@ DNA_metadata <- DNA_iso %>%
   distinct(prod_level, Island, Extraction.ID) %>%
   column_to_rownames(var = "Extraction.ID")
 
-adonis(DNA_matrix ~ prod_level, data = DNA_metadata,
-       method = "jaccard", nperm = 999)
-
-beta.multi(DNA_matrix, index.family = "jaccard")  
-dist<-beta.pair(DNA_matrix, index.family="jaccard")
-
-p <- betadisper(dist[[1]], DNA_metadata$prod_level)
-plot(p)
-p2 <- betadisper(dist[[2]], DNA_metadata$prod_level)
-plot(p2)
-p3 <- betadisper(dist[[3]], DNA_metadata$prod_level)
-plot(p3)
