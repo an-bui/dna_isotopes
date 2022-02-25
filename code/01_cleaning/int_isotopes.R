@@ -67,7 +67,8 @@ spiders_12 <- data_list[[4]] %>%
   dplyr::select(Organism, Year, Island,
                 d15N, d13C)
 
-int_iso <- bind_rows(bugs_09, bugs_10, spiders_10, spiders_12)
+int_iso <- bind_rows(#bugs_09, bugs_10, 
+  spiders_10, spiders_12)
   
 #Diptera - 2009_Palmyra_Insect_Amphipod_Isopod_Isotopes
 #Hempitera - 2010_Palmyra_Insect_Isotopes
@@ -179,6 +180,10 @@ int_iso <- int_iso %>%
                                           "Leslie PG") ~ "Leslie",
                             TRUE ~ NA_character_))
 
+int_iso %>%
+  group_by(Island) %>%
+  tally() %>%
+  arrange(desc(n))
 #join with plant and island datasets
 int_iso <- int_iso %>%
   left_join(plant_iso_2, by = c("Island" = "Island.name"))  %>%
@@ -192,9 +197,12 @@ int_iso <- int_iso %>%
                                      d13_consumer = d13C)) %>%
   filter(!is.na(plant_d15N)) %>%
   left_join(islands, by = "Island") %>%
-  filter(!is.na(prod_level))
+  filter(!is.na(prod_level)) 
 
 #get stats
 int_iso %>%
   group_by(prod_level) %>%
   tally()
+
+ggplot(int_iso, aes(x = d13C, y = d15N_c, color = prod_level)) +
+  geom_point()

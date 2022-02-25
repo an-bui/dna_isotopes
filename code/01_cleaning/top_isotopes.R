@@ -83,9 +83,7 @@ guano_iso <- plant_iso %>%
 #categorize islet size and productivity into high/low, big/small
 islands <- islands %>%
   mutate(prod_level = ifelse(Island_prod > 0.008707850, 
-                             "high", "low"),
-         size_level = ifelse(Island_Area > 39629.5965, 
-                             "big", "small"))
+                             "high", "low"))
 
 #rename stuff in the body size dataset for consistency
 spider_size <- spider_size %>%
@@ -126,13 +124,24 @@ spider_iso <- spider_iso %>%
   filter(!Island %in% c("Ainsley", "Whipoorwill", "Home")) %>%
   filter(!is.na(plant_d15N)) %>%
   left_join(islands, by = "Island") %>%
-  left_join(spider_size2, by = c("Island", "ID", "Year"))
+  left_join(spider_size2, by = c("Island", "ID", "Year")) 
+
+
+spider_iso <- spider_iso %>%
+  mutate(Habitat = case_when(Island %in% c("Castor", "Fern", "Paradise",
+                                           "Holei", "Kaula") ~ "CN",
+                             Island %in% c("Dudley", "Leslie", "Lost",
+                                           "Eastern", "Sand") ~ "PG")) %>%
+  filter(!Island %in% c("Aviation", "Frigate"))
 
 spider_iso %>%
-  group_by(prod_level) %>%
+  group_by(Island) %>%
   tally()
-
-
+spider_iso %>%
+  group_by(Habitat) %>%
+  tally()
+spider_iso %>%
+  tally()
 
 
 

@@ -34,16 +34,20 @@ DNA_meta <- read.csv(here("data",
 # variables of interest, change ID name and make a presence column
 # remove all zero interactions
 DNA_int <- DNA %>%
-  filter(sample_str %in% c("NEO", "SCY", "LRS")) %>%
+  filter(sample_str %in% c("NEO", "SCY", "LRS", 
+                           "SME")) %>%
   filter(Class != "Mammalia") %>%
   filter(ID_level %in% c("Order", "Family", "Genus", "Species")) %>%
   filter(reads > 0) %>%
+  ungroup() %>%
+  mutate(Class = case_when(Order == "Entomobryomorpha" ~ "Collembola",
+                           TRUE ~ Class)) %>%
   dplyr::select(sample, 
                 Class, 
                 Order,
                 reads) %>%
   mutate(sample = str_sub(sample,1,nchar(sample)-1)) %>%
-  group_by(sample, Class, Order) %>%
+  group_by(sample,Class, Order) %>%
   summarise(reads = sum(reads)) %>%
   mutate(presence = 1)
 
@@ -51,6 +55,7 @@ DNA_int <- DNA %>%
 # naming of samples
 DNA_intmeta <- DNA_meta %>%
   filter(ID %in% c("Scytodes longipes",
+                   "Smeringopus pallidus",
                    "Neoscona theisi",
                    "Keijia mneon")) %>% #& Year == 2015) %>%
   group_by(Island, Habitat, Extraction.ID, ID) %>%
@@ -60,11 +65,11 @@ DNA_intmeta <- DNA_meta %>%
 
 #combine DNA data with metadata
 DNA_intfull <- DNA_int %>%
-  full_join(DNA_preymeta, by = c("sample" = "Extraction.ID")) %>%
+  full_join(DNA_intmeta, by = c("sample" = "Extraction.ID")) %>%
   mutate(category = case_when(Habitat %in% c("PF", "PG", "TA") ~ "high",
                               TRUE ~ "low")) %>%
   filter(!is.na(Order)) %>%
-  filter(Habitat != "TA")
+  filter(Habitat %in% c("PG", "CN")) 
 
 #get stats
 DNA_intfull %>%
@@ -85,19 +90,19 @@ DNA_intfull %>%
 
 #get frequency of different kinds of prey of prey by habitat cateogry
 habitat_int <- DNA_intfull %>%
-  group_by(Class, Order, category) %>%
+  group_by(Class, Order, Habitat) %>%
   summarise(Frequency = n())
 
 #figure out sample size
 sample_size_int <- DNA_intfull %>%
   ungroup() %>%
-  distinct(sample,  category) %>%
-  group_by(category) %>%
+  distinct(sample,  Habitat) %>%
+  group_by(Habitat) %>%
   tally(name = "sample_sz") 
 
 #get % of pop that eats that thing
 habitat_int2 <- habitat_int %>%
-  left_join(sample_size_int, by = c("category")) %>%
+  left_join(sample_size_int, by = c("Habitat")) %>%
   mutate(percent = Frequency/sample_sz)
 
 

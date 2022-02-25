@@ -27,81 +27,60 @@ source(here("code",
             "top_isotopes.R"))
 #df = spider_iso
 
-#int preds
-source(here("code", 
-            "01_cleaning",
-            "int_isotopes.R"))
-#df = int_iso
 
-
-# Combine DFs -------------------------------------------------------------
-
-colnames(spider_iso)
-spider_iso <- spider_iso %>%
-  dplyr::select(Island, d13C, Year, d15N_c, prod_level) %>%
-  mutate(Organism = "Heteropoda venatoria",
-         group = "top")
-
-colnames(int_iso)
-int_iso <- int_iso %>%
-  dplyr::select(Organism, Island, d13C, Year, d15N_c, prod_level) %>%
-  mutate(group = "intermediate")
-
-all_iso <- rbind(spider_iso, int_iso)
 # Models ------------------------------------------------------------------
 
-#d15 N by productivity level and predator group
-m1 <- glmmTMB(d15N_c ~ prod_level*group + (1|Year) + (1|Island),
-              data = all_iso)
+#d15 N by productivity level
+m1 <- glmmTMB(d15N_c ~ Habitat + (1|Year) + (1|Island),
+              data = spider_iso)
 
 summary(m1)
+confint(m1)
 plot(allEffects(m1))
 simulateResiduals(m1, plot = T)
 
-#d14 C by productivity level and predator group
-m2 <- glmmTMB(d13C ~ prod_level*group + (1|Year) + (1|Island),
-              data = all_iso)
-
+#d14 C by productivity level
+m2 <- glmmTMB(d13C ~ Habitat + (1|Year) + (1|Island),
+              data = spider_iso)
+confint(m2)
 summary(m2)
 plot(allEffects(m2))
 simulateResiduals(m2, plot = T)
 
 # Visualizations ----------------------------------------------------------
 
-d15 <- ggplot(all_iso, aes(x = prod_level, y = d15N_c, fill = prod_level)) +
+d15 <- ggplot(spider_iso, aes(x = Habitat, y = d15N_c, fill = Habitat)) +
   geom_boxplot(size =1, alpha = 0.6) +
-  geom_point(aes(color = prod_level), 
+  geom_point(aes(color = Habitat), 
              position=position_jitterdodge()) +
   theme_bw() +  
   labs(y = expression({delta}^15*N~ ('\u2030')), 
-       x = "Islet productivity",
-       fill = "Islet productivity") +
-  scale_fill_manual(values = c("#80cdc1",
-                               "#bf812d")) +
-  scale_color_manual(values = c("#80cdc1",
-                                "#bf812d")) +
+       x = "Habitat",
+       fill = "Habitat") +
+  scale_fill_manual(values = c("#bf812d",
+                               "#80cdc1")) +
+  scale_color_manual(values = c("#bf812d",
+                                "#80cdc1")) +
   theme(legend.position = "none",
         axis.text.x = element_blank(),
-        axis.title.x = element_blank()) +
-  facet_grid(~group)
+        axis.title.x = element_blank()) 
 
-
-d13 <- ggplot(all_iso, aes(x = prod_level, y = d13C, fill = prod_level)) +
+d13 <- ggplot(spider_iso, aes(x = Habitat, y = d13C, fill = Habitat)) +
   geom_boxplot(size =1, alpha = 0.6) +
-  geom_point(aes(color = prod_level), 
+  geom_point(aes(color = Habitat), 
              position=position_jitterdodge()) +
   theme_bw() +  
   labs(y = expression({delta}^13*C~ ('\u2030')), 
-       x = "Islet productivity",
-       fill = "Islet productivity") +
-  scale_fill_manual(values = c("#80cdc1",
-                               "#bf812d")) +
-  scale_color_manual(values = c("#80cdc1",
-                                "#bf812d")) +
-  theme(legend.position = "none") +
-  facet_grid(~group)
+       x = "Habitat",
+       fill = "Habitat") +
+  scale_fill_manual(values = c("#bf812d",
+                               "#80cdc1")) +
+  scale_color_manual(values = c("#bf812d",
+                                "#80cdc1")) +
+  theme(legend.position = "none") 
 
-iso_graphs <- d15/d13
+
+(iso_graphs <- d15/d13)
 
 ggsave(plot = iso_graphs,
        filename = 'iso_graphs.png',

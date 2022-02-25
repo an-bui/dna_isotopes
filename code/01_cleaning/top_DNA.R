@@ -62,19 +62,19 @@ DNA <- DNA %>%
 DNA_meta <- DNA_meta %>%
   filter(ID == "Heteropoda venatoria") %>% #& Year == 2015) %>%
   mutate(Isotope_ID = word(Isotope_ID,2)) %>%
-  dplyr::select(Island, Isotope_ID, Extraction.ID) %>%
-  distinct(Island, Isotope_ID, Extraction.ID) 
+  dplyr::select(Island, Habitat, Isotope_ID, Extraction.ID) %>%
+  distinct(Island, Habitat, Isotope_ID, Extraction.ID) 
 
 #combine DNA data with the isotope data 
 DNA_iso <- spider_iso %>%
+  dplyr::select(-Habitat) %>%
   filter(Year == 2015) %>%
   full_join(DNA_meta, by = c("Island", c("ID" = "Isotope_ID"))) %>%
   filter(!is.na(Extraction.ID)) %>%
   left_join(DNA, by = c("Extraction.ID" = "sample")) %>%
   filter(!Island %in% c("Cooper", "North Fighter")) %>%
   filter(!is.na(Order)) %>%
-  dplyr::select(-Island_Area, -Island_prod, -prod_level,
-                -size_level) %>%
+  dplyr::select(-Island_Area, -Island_prod, -prod_level) %>%
   left_join(islands, by = "Island")
 
 
@@ -83,17 +83,8 @@ DNA_iso <- spider_iso %>%
 
 #get frequency of different kinds of prey by islet populations
 islet_prey <- DNA_iso %>%
-  group_by(Island, prod_level, size_level, Class, Order) %>%
+  group_by(Habitat, Class, Order) %>%
   summarise(Frequency = n())
-
-sample_size <- DNA_iso %>%
-  distinct(Island, Extraction.ID) %>%
-  group_by(Island) %>%
-  tally(name = "sample_sz") 
-
-islet_prey2 <- islet_prey %>%
-  left_join(sample_size, by = "Island") %>%
-  mutate(percent = Frequency/sample_sz)
 
 #get stats
 DNA_iso %>%
@@ -101,8 +92,12 @@ DNA_iso %>%
   tally()
 
 DNA_iso %>%
-  distinct(Extraction.ID, prod_level) %>%
-  group_by(prod_level) %>%
+  distinct(Extraction.ID, Habitat) %>%
+  group_by(Habitat) %>%
+  tally()
+
+DNA_iso %>%
+  group_by(Habitat) %>%
   tally()
 
 
@@ -119,7 +114,7 @@ DNA_matrix <- DNA_iso %>%
 
 DNA_metadata <- DNA_iso %>%
   ungroup() %>%
-  dplyr::select(Extraction.ID, prod_level, Island) %>%
-  distinct(prod_level, Island, Extraction.ID) %>%
+  dplyr::select(Extraction.ID, prod_level, Habitat, Island) %>%
+  distinct(prod_level, Island, Habitat, Extraction.ID) %>%
   column_to_rownames(var = "Extraction.ID")
 
