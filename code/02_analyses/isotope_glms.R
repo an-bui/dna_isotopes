@@ -38,7 +38,7 @@ summary(m1)
 confint(m1)
 plot(allEffects(m1))
 simulateResiduals(m1, plot = T)
-
+r2_nakagawa(m1)
 #d14 C by productivity level
 m2 <- glmmTMB(d13C ~ Habitat + (1|Year) + (1|Island),
               data = spider_iso)
@@ -46,6 +46,7 @@ confint(m2)
 summary(m2)
 plot(allEffects(m2))
 simulateResiduals(m2, plot = T)
+r2_nakagawa(m2)
 
 # Visualizations ----------------------------------------------------------
 
