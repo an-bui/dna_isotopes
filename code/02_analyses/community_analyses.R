@@ -89,49 +89,9 @@ capt <- capscale(DNA_matrix ~ DNA_metadata$Habitat,
 
 xt <- as.data.frame(scores(capt, display = "sites"))
 
-top_comm <- xt %>%
-  rownames_to_column(var = "Extraction.ID") %>%
-  left_join(DNA_meta, by = "Extraction.ID") %>%
-  ggplot(aes(x = CAP1, y = MDS1, color = Habitat)) +
-  geom_point(size = 2) +
-  scale_fill_manual(values = c("#bf812d",
-                               "#80cdc1")) +
-  scale_color_manual(values = c("#bf812d",
-                                "#80cdc1")) +
-  stat_ellipse(size = 1) +
-  theme_bw() +
-  labs(title = "Top predators")
 
 capi <- capscale(intDNA_matrix ~ DNA_intmetadata$Habitat, 
                 dist = "jaccard")
 
 xi <- as.data.frame(scores(capi, display = "sites"))
 
-int_comm <- xi %>%
-  rownames_to_column(var = "Extraction.ID") %>%
-  left_join(DNA_intmeta, by = "Extraction.ID") %>%
-ggplot(aes(x = CAP1, y = MDS1, color = Habitat)) +
-  geom_point(size = 2) +
-  scale_fill_manual(values = c("#bf812d",
-                               "#80cdc1")) +
-  scale_color_manual(values = c("#bf812d",
-                                "#80cdc1")) +
-  stat_ellipse(size = 1) +
-  theme_bw() +
-  labs(title= "Intermediate predators")
-
-biplot <- int_comm + top_comm 
-
-ggsave(plot = biplot,
-       filename = 'biplot_graphs.png',
-       path = here("pictures", "R"),
-       width = 6, height = 4,
-       units = "in")
-
-comp <- int_id + top_id
-
-ggsave(plot = comp,
-       filename = 'comp_graphs.png',
-       path = here("pictures", "R"),
-       width = 6, height = 4,
-       units = "in")

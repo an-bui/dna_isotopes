@@ -72,29 +72,4 @@ plot(allEffects(m1))
 
 # Visualizations ----------------------------------------------------------
 
-iso_niche <- spider_iso %>%
-  mutate(Island = factor(Island, 
-                         levels = c("Castor", "Fern",
-                                    "Holei","Kaula", "Paradise", 
-                                    "Dudley", "Eastern",
-                                    "Leslie", "Lost", "Sand"))) %>%
-ggplot(aes(x = d13C, y = d15N_c, color = Island)) +
-  geom_point() +
-  labs(x = expression({delta}^13*C~ ('\u2030')), 
-       y = expression({delta}^15*N~ ('\u2030'))) +
-  scale_color_manual(values = c("#2D1A03", "#543005", 
-                                "#8c510a","#bf812d",
-                                "#dfc27d", "#c7eae5",
-                                "#80cdc1", "#35978f", "#01665e", 
-                                "#003c30", "#001511")) +
-  stat_ellipse(aes(linetype = Habitat)) +
-  theme_bw()
 
-niche_box <- ggplot(all_niche, aes(x = Method, y = ShapeArea, fill = Habitat)) +
-  geom_boxplot() +
-  labs(y = "95% isotopic niche area", 
-       x = "Isotopic niche method",
-       fill = "Habitat") +
-  scale_fill_manual(values = c("#bf812d",
-                               "#80cdc1")) +
-  theme_bw()
