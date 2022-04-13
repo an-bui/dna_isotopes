@@ -58,12 +58,11 @@ iso_niche_opt2 <- spider_iso %>%
   geom_point(size = 2) +
   labs(x = expression({delta}^13*C~ ('\u2030')), 
        y = expression({delta}^15*N~ ('\u2030'))) +
-  scale_color_manual(values = c("#bf812d",
-                                "#80cdc1")) +
+  scale_color_manual(values = c("CN" = cn_col, "PG" = pg_col)) +
   stat_ellipse(size = 1) +
   # in plot annotations of CN and PG
-  annotate("text", x = -26, y = 7.2, label = "Cocos", size = 11, col = cn_col) +
-  annotate("text", x = -20.1, y = 3.4, label = "Pisonia", size = 11, col = pg_col) +
+  annotate("text", x = -26, y = 7.2, label = "Pisonia", size = 11, col = pg_col) +
+  annotate("text", x = -20.1, y = 3.4, label = "Cocos", size = 11, col = cn_col) +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 14),
@@ -99,10 +98,10 @@ iso_niche_opt3 <- spider_iso %>%
   annotate("text", x = -26.7, y = 7.4, label = "Pisonia", size = 10.5, col = pg_col) +
   annotate("text", x = -20.05, y = 3.4, label = "Cocos", size = 10.5, col = cn_col) +
   theme_bw() +
-  theme(axis.text = element_text(size = 14),
-        axis.title = element_text(size = 14),
-        legend.text = element_text(size = 11),
-        legend.title = element_text(size = 12)
+  theme(axis.text = element_text(size = 23),
+        axis.title = element_text(size = 23),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 25)
   ) 
 
 iso_niche_opt3
@@ -133,16 +132,13 @@ top_comm_opt2 <- xt %>%
   scale_color_manual(values = c(cn_col, pg_col)) +
   stat_ellipse(size = 1) +
   theme_bw() +
-  theme(axis.text = element_text(size = 14),
-        axis.title = element_text(size = 14),
-        legend.text = element_text(size = 11),
-        legend.title = element_text(size = 12),
+  theme(axis.text = element_text(size = 23),
+        axis.title = element_text(size = 23),
         legend.position = "none"
   ) +
   # in plot annotations of CN and PG
-  annotate("text", x = -4, y = 1.5, label = "Cocos", size = 11, col = cn_col) +
-  annotate("text", x = 3, y = 2, label = "Pisonia", size = 11, col = pg_col) +
-  labs(title = "Top predators")
+  annotate("text", x = -4, y = 1.7, label = "Cocos", size = 11, col = cn_col) +
+  annotate("text", x = 2.8, y = -1.8, label = "Pisonia", size = 11, col = pg_col) 
 
 top_comm_opt2
 
@@ -172,10 +168,10 @@ niche_box_opt2 <- all_niche %>%
   scale_fill_manual(values = c(cn_col,
                                pg_col)) +
   theme_bw() +
-  theme(axis.text = element_text(size = 14),
-        axis.title = element_text(size = 14),
-        legend.text = element_text(size = 11),
-        legend.title = element_text(size = 12)
+  theme(axis.text = element_text(size = 23),
+        axis.title = element_text(size = 23),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 25)
   ) 
 
 niche_box_opt2
@@ -258,14 +254,14 @@ cn_prey_plot <- ggplot(cn_prey, aes(x = Habitat, y = Frequency, fill = Order)) +
         axis.title.x = element_blank(),
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size = 14),
-        axis.title.y = element_text(size = 14), 
+        axis.text.y = element_text(size = 23),
+        axis.title.y = element_text(size = 23), 
         panel.grid = element_line(color = "white"),
         panel.border = element_rect(color = "white"),
         strip.background = element_rect(color = "white", fill = "white"),
-        strip.text = element_text(size = 16)
+        strip.text = element_text(size = 25)
         ) +
-  facet_wrap(~Habitat, strip.position = "bottom")
+  facet_wrap(~Habitat, strip.position = "top")
 
 pg_prey <- df_prey %>% 
   filter(Habitat == "Pisonia") %>% 
@@ -287,9 +283,11 @@ pg_prey_plot <- ggplot(pg_prey, aes(x = Habitat, y = Frequency, fill = Order)) +
         panel.grid = element_line(color = "white"),
         panel.border = element_rect(color = "white"),
         strip.background = element_rect(color = "white", fill = "white"),
-        strip.text = element_text(size = 16)
+        strip.text = element_text(size = 25),
+        legend.title = element_text(size = 25),
+        legend.text = element_text(size = 20)
         ) +
-  facet_wrap(~Habitat, strip.position = "bottom")
+  facet_wrap(~Habitat, strip.position = "top")
 
 top_id_opt2 <- cn_prey_plot + pg_prey_plot
 
@@ -301,12 +299,22 @@ top_id_opt2
 fig1 <- (iso_niche + top_comm)/(niche_box + top_id)
 fig1
 
-fig1_opt2 <- (iso_niche_opt3 + top_comm_opt2)/(niche_box_opt2 + top_id_opt2)
-
 ggsave(plot = fig1,
        filename = 'top_niche.png',
        path = here("pictures", "R"),
        width = 7, height = 7,
+       units = "in")
+
+fig1_opt2 <- (iso_niche_opt3 + top_comm_opt2)/(niche_box_opt2 + top_id_opt2) +
+  plot_layout(tag_level = "new") &
+  plot_annotation(tag_levels = list(c("A", "B", "C", "D", ""))) &
+  theme(plot.tag = element_text(size = 40))
+fig1_opt2
+
+ggsave(plot = fig1_opt2,
+       filename = 'top_niche_opt2.png',
+       path = here("pictures", "R"),
+       width = 18, height = 14,
        units = "in")
 
 
@@ -338,21 +346,18 @@ int_comm_opt2 <- xi %>%
   rownames_to_column(var = "Extraction.ID") %>%
   left_join(DNA_intmeta, by = "Extraction.ID") %>%
   ggplot(aes(x = CAP1, y = MDS1, color = Habitat)) +
-  geom_point(size = 2) +
+  geom_point(size = 5) +
   scale_fill_manual(values = c(cn_col, pg_col)) +
   scale_color_manual(values = c(cn_col, pg_col)) +
-  stat_ellipse(size = 1) +
+  stat_ellipse(size = 2) +
   theme_bw() +
-  theme(axis.text = element_text(size = 14),
-        axis.title = element_text(size = 14),
-        legend.text = element_text(size = 11),
-        legend.title = element_text(size = 12),
+  theme(axis.text = element_text(size = 23),
+        axis.title = element_text(size = 23),
         legend.position = "none"
   ) +
   # in plot annotations of CN and PG
   annotate("text", x = -2, y = -1.5, label = "Cocos", size = 11, col = cn_col) +
-  annotate("text", x = 1, y = 2, label = "Pisonia", size = 11, col = pg_col) +
-  labs(title = "Intermediate predators")
+  annotate("text", x = 1, y = 2, label = "Pisonia", size = 11, col = pg_col)
 
 int_comm_opt2
 
@@ -422,19 +427,20 @@ cn_int_col <- pull(cn_int, color_col)
 cn_int_plot <- ggplot(cn_int, aes(x = Habitat, y = Frequency, fill = Order)) +
   geom_col(color = "black", position = "fill") +
   scale_fill_manual(values = cn_int_col, drop = FALSE) +
+  scale_y_continuous(expand = c(0.01, 0.01)) +
   theme_bw() +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank(),
-        axis.text.y = element_text(size = 14),
-        axis.title.y = element_text(size = 14), 
+        axis.text.y = element_text(size = 23),
+        axis.title.y = element_text(size = 23), 
         panel.grid = element_line(color = "white"),
         panel.border = element_rect(color = "white"),
         strip.background = element_rect(color = "white", fill = "white"),
-        strip.text = element_text(size = 16)
+        strip.text = element_text(size = 25)
   ) +
-  facet_wrap(~Habitat, strip.position = "bottom")
+  facet_wrap(~Habitat, strip.position = "top")
 
 pg_int <- df_int %>% 
   filter(Habitat == "Pisonia") %>% 
@@ -446,6 +452,7 @@ pg_int_col <- pull(pg_int, color_col)
 pg_int_plot <- ggplot(pg_int, aes(x = Habitat, y = Frequency, fill = Order)) +
   geom_col(color = "black", position = "fill") +
   scale_fill_manual(values = pg_int_col, drop = FALSE) +
+  scale_y_continuous(expand = c(0.01, 0.01)) +
   theme_bw() +
   theme(axis.title.y = element_blank(),
         axis.text.y = element_blank(),
@@ -456,9 +463,11 @@ pg_int_plot <- ggplot(pg_int, aes(x = Habitat, y = Frequency, fill = Order)) +
         panel.grid = element_line(color = "white"),
         panel.border = element_rect(color = "white"),
         strip.background = element_rect(color = "white", fill = "white"),
-        strip.text = element_text(size = 16)
+        strip.text = element_text(size = 25),
+        legend.title = element_text(size = 25),
+        legend.text = element_text(size = 20)
   ) +
-  facet_wrap(~Habitat, strip.position = "bottom")
+  facet_wrap(~Habitat, strip.position = "top")
 
 int_id_opt2 <- cn_int_plot + pg_int_plot
 
@@ -471,12 +480,20 @@ int_id_opt2
 fig2 <- int_comm + int_id
 fig2
 
-fig2_opt2 <- int_comm_opt2 + int_id_opt2 +
-  plot_layout(widths = c(3, 3))
+# ggsave(plot = fig2,
+#        filename = 'int_niche.png',
+#        path = here("pictures", "R"),
+#        width = 7, height = 4,
+#        units = "in")
+
+fig2_opt2 <- (int_comm_opt2 + int_id_opt2) +
+  plot_layout(widths = c(5, 3), tag_level = "new") &
+  plot_annotation(tag_levels = list(c("A", "B", ""))) &
+  theme(plot.tag = element_text(size = 40))
 fig2_opt2
 
-ggsave(plot = fig2,
-       filename = 'int_niche.png',
+ggsave(plot = fig2_opt2,
+       filename = 'int_niche_opt2.png',
        path = here("pictures", "R"),
-       width = 7, height = 4,
+       width = 16, height = 10,
        units = "in")
