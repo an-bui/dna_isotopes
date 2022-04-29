@@ -61,8 +61,8 @@ iso_niche_opt2 <- spider_iso %>%
   scale_color_manual(values = c("CN" = cn_col, "PG" = pg_col)) +
   stat_ellipse(size = 1) +
   # in plot annotations of CN and PG
-  annotate("text", x = -26, y = 7.2, label = "Pisonia", size = 11, col = pg_col) +
-  annotate("text", x = -20.1, y = 3.4, label = "Cocos", size = 11, col = cn_col) +
+  annotate("text", x = -26, y = 7.2, label = "High", size = 11, col = pg_col) +
+  annotate("text", x = -20.1, y = 3.4, label = "Low", size = 11, col = cn_col) +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 14),
@@ -91,12 +91,13 @@ iso_niche_opt3 <- spider_iso %>%
                                 "#35978f", # Leslie
                                 "#01665e", # Lost
                                 "#003c30" # Sand
-                                )) +
+                                ),
+                     name = "Islet") +
   stat_ellipse(aes(linetype = Habitat)) +
   scale_linetype_manual(values = c(1, 2), guide = "none") +
   # in plot annotations of CN and PG
-  annotate("text", x = -26.7, y = 7.4, label = "Pisonia", size = 10.5, col = pg_col) +
-  annotate("text", x = -20.05, y = 3.4, label = "Cocos", size = 10.5, col = cn_col) +
+  annotate("text", x = -26.7, y = 7.4, label = "High", size = 10.5, col = pg_col) +
+  annotate("text", x = -20.05, y = 3.4, label = "Low", size = 10.5, col = cn_col) +
   theme_bw() +
   theme(axis.text = element_text(size = 23),
         axis.title = element_text(size = 23),
@@ -137,8 +138,8 @@ top_comm_opt2 <- xt %>%
         legend.position = "none"
   ) +
   # in plot annotations of CN and PG
-  annotate("text", x = -4, y = 1.7, label = "Cocos", size = 11, col = cn_col) +
-  annotate("text", x = 2.8, y = -1.8, label = "Pisonia", size = 11, col = pg_col) 
+  annotate("text", x = -4, y = 1.7, label = "Low", size = 11, col = cn_col) +
+  annotate("text", x = 2.8, y = -1.8, label = "High", size = 11, col = pg_col) 
 
 top_comm_opt2
 
@@ -159,14 +160,14 @@ niche_box <- ggplot(all_niche, aes(x = Method, y = ShapeArea, fill = Habitat)) +
 # a boxplot with jittered points on top, or a violin?
 
 niche_box_opt2 <- all_niche %>% 
-  mutate(Habitat = recode(Habitat, CN = "Cocos", PG = "Pisonia")) %>% 
+  mutate(Habitat = recode(Habitat, CN = "Low", PG = "High")) %>% 
   ggplot(aes(x = Method, y = ShapeArea, fill = Habitat)) +
   geom_violin() +
   labs(y = "95% isotopic niche area", 
        x = "Isotopic niche method",
        fill = "Habitat") +
-  scale_fill_manual(values = c(cn_col,
-                               pg_col)) +
+  scale_fill_manual(values = c(pg_col,
+                               cn_col)) +
   theme_bw() +
   theme(axis.text = element_text(size = 23),
         axis.title = element_text(size = 23),
@@ -225,7 +226,7 @@ df_prey <- islet_prey %>%
   pivot_longer(CN:PG, names_to = "Habitat", values_to = "Frequency") %>% 
   ungroup() %>% 
   fill(Order) %>% 
-  mutate(Habitat = recode(Habitat, CN = "Cocos", PG = "Pisonia"))
+  mutate(Habitat = recode(Habitat, CN = "Low", PG = "High"))
 
 levels_prey <- c(
   # five shared species in alphabetical order
@@ -240,7 +241,7 @@ levels_prey <- c(
 
 # CN data frame
 cn_prey <- df_prey %>% 
-  filter(Habitat == "Cocos") %>% 
+  filter(Habitat == "Low") %>%
   mutate(Order = fct_relevel(Order, levels_prey)) %>% 
   arrange(Order) 
 
@@ -264,7 +265,7 @@ cn_prey_plot <- ggplot(cn_prey, aes(x = Habitat, y = Frequency, fill = Order)) +
   facet_wrap(~Habitat, strip.position = "top")
 
 pg_prey <- df_prey %>% 
-  filter(Habitat == "Pisonia") %>% 
+  filter(Habitat == "High") %>% 
   mutate(Order = fct_relevel(Order, levels_prey)) %>% 
   arrange(Order)
 
@@ -356,8 +357,8 @@ int_comm_opt2 <- xi %>%
         legend.position = "none"
   ) +
   # in plot annotations of CN and PG
-  annotate("text", x = -2, y = -1.5, label = "Cocos", size = 11, col = cn_col) +
-  annotate("text", x = 1, y = 2, label = "Pisonia", size = 11, col = pg_col)
+  annotate("text", x = -2, y = -1.5, label = "Low", size = 11, col = cn_col) +
+  annotate("text", x = 1, y = 2, label = "High", size = 11, col = pg_col)
 
 int_comm_opt2
 
@@ -404,7 +405,7 @@ df_int <- habitat_int %>%
   pivot_longer(CN:PG, names_to = "Habitat", values_to = "Frequency") %>% 
   ungroup() %>% 
   fill(Order) %>% 
-  mutate(Habitat = recode(Habitat, CN = "Cocos", PG = "Pisonia"))
+  mutate(Habitat = recode(Habitat, CN = "Low", PG = "High"))
 
 levels_pred <- c(
   # six shared species in alphabetical order
@@ -417,7 +418,7 @@ levels_pred <- c(
 
 # CN data frame
 cn_int <- df_int %>% 
-  filter(Habitat == "Cocos") %>% 
+  filter(Habitat == "Low") %>% 
   arrange(-Frequency) %>% 
   mutate(Order = fct_relevel(Order, levels_pred)) %>% 
   arrange(Order) 
@@ -443,7 +444,7 @@ cn_int_plot <- ggplot(cn_int, aes(x = Habitat, y = Frequency, fill = Order)) +
   facet_wrap(~Habitat, strip.position = "top")
 
 pg_int <- df_int %>% 
-  filter(Habitat == "Pisonia") %>% 
+  filter(Habitat == "High") %>% 
   mutate(Order = fct_relevel(Order, levels_pred)) %>% 
   arrange(Order)
 

@@ -10,7 +10,7 @@
 
 package.list <- c("here", "tidyverse", "glmmTMB",
                   "effects", "MuMIn", "DHARMa",
-                  "patchwork")
+                  "patchwork", "performance")
 
 ## Installing them if they aren't already on the computer
 new.packages <- package.list[!(package.list %in% installed.packages()[,"Package"])]
@@ -47,6 +47,41 @@ summary(m2)
 plot(allEffects(m2))
 simulateResiduals(m2, plot = T)
 r2_nakagawa(m2)
+
+
+# Those with DNA only -----------------------------------------------------
+
+dna_isotopes <- DNA_iso %>%
+  filter(!is.na(d15N_c)) %>%
+  distinct(Island, Extraction.ID, Habitat, d15N_c)
+
+dna_isotopes %>%
+  group_by(Island) %>%
+  tally()
+
+m3 <- glmmTMB(d15N_c ~ Habitat + (1|Island),
+data = dna_isotopes)
+
+confint(m3)
+summary(m3)
+plot(allEffects(m3))
+simulateResiduals(m3, plot = T)
+
+
+# Isotopes and body size --------------------------------------------------
+
+m_length <- glmmTMB(d15N_c ~ Length_mm + (1|Year) + (1|Island), 
+                  data = spider_iso)
+
+m_mass <- glmmTMB(d15N_c ~ Mass_g + (1|Year) + (1|Island), 
+                  data = spider_iso)
+
+summary(m_length)
+plot(allEffects(m_length))
+confint(m_length)
+
+summary(m_mass)
+confint(m_mass)
 
 # Visualizations ----------------------------------------------------------
 

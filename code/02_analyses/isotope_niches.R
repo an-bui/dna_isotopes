@@ -10,7 +10,7 @@
 package.list <- c("here", "tidyverse", 
                   "SIBER", "rKIN",
                   "DHARMa", "effects",
-                  "glmmTMB")
+                  "glmmTMB", "emmeans")
 
 ## Installing them if they aren't already on the computer
 new.packages <- package.list[!(package.list %in% installed.packages()[,"Package"])]
@@ -68,6 +68,10 @@ summary(m1)
 
 simulateResiduals(m1, plot = T)
 plot(allEffects(m1))
+
+summary(m1)
+
+pairs(emmeans(m1, ~ Habitat | Method))
 
 
 # Visualizations ----------------------------------------------------------
