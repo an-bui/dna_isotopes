@@ -71,9 +71,6 @@ plot(allEffects(m1))
 
 summary(m1)
 
-pairs(emmeans(m1, ~ Habitat | Method))
-
-
 # Visualizations ----------------------------------------------------------
 
 

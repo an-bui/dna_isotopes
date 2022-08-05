@@ -8,7 +8,8 @@
 
 # Load packages -----------------------------------------------------------
 
-package.list <- c("here", "tidyverse", "readxl", "lubridate")
+package.list <- c("here", "tidyverse", "readxl", "lubridate",
+                  'patchwork')
 
 ## Installing them if they aren't already on the computer
 new.packages <- package.list[!(package.list %in% installed.packages()[,"Package"])]
@@ -21,6 +22,8 @@ for(i in package.list){library(i, character.only = T)}
 source(here("code",
             "00_functions",
             "tidy_functions.R"))
+
+theme_set(theme_bw())
 
 # Load Data ---------------------------------------------------------------
 #spider isotope data
@@ -85,6 +88,15 @@ islands <- islands %>%
   mutate(prod_level = ifelse(Island_prod > 0.008707850, 
                              "high", "low"))
 
+islands %>%
+  filter(!is.na(Island_prod)) %>%
+  group_by(prod_level) %>%
+  summarise(mean = mean(Island_prod, na.rm = T)) %>%
+  ungroup() %>%
+  pivot_wider(names_from = "prod_level",
+              values_from = "mean") %>%
+  mutate(diff = high/low)
+
 #rename stuff in the body size dataset for consistency
 spider_size <- spider_size %>%
   mutate(Island = case_when(Island == "North Fighter" ~ "N.Fighter",
@@ -124,6 +136,21 @@ spider_iso <- spider_iso %>%
   filter(!Island %in% c("Ainsley", "Whipoorwill", "Home")) %>%
   filter(!is.na(plant_d15N)) %>%
   left_join(islands, by = "Island") %>%
+  #guano d15N_C correction
+  mutate(d15N_g = case_when(prod_level == "high" ~ isotope_correction(d15_plant = plant_d15N,  
+                                                                      d13_plant = plant_d13C,
+                                                                      d15_marine = guano_d15N, 
+                                                                      d13_marine = guano_d13C,
+                                                                      d15_consumer = d15N, 
+                                                                      d13_consumer = d13C),
+                            prod_level == "low" ~ d15N_c,
+                            TRUE ~ NA_real_)) %>%
+  mutate(d15N_g2 = isotope_correction(d15_plant = plant_d15N,  
+                                      d13_plant = plant_d13C,
+                                      d15_marine = guano_d15N, 
+                                      d13_marine = guano_d13C,
+                                      d15_consumer = d15N, 
+                                      d13_consumer = d13C)) %>%
   left_join(spider_size2, by = c("Island", "ID", "Year")) 
 
 
@@ -143,5 +170,48 @@ spider_iso %>%
 spider_iso %>%
   tally()
 
+spider_iso %>%
+  group_by(prod_level) %>%
+  summarise(mean_plant = mean(plant_d15N),
+            mean_d15 = mean(d15N),
+            mean_d15c = mean(d15N_c),
+            mean_d15g = mean(d15N_g))
+
+a <- ggplot(spider_iso, aes(x= prod_level, y = plant_d15N)) +
+  geom_boxplot()
+
+b <- ggplot(spider_iso, aes(x = prod_level, y = d15N)) +
+  geom_boxplot()
+
+c <- ggplot(spider_iso, aes(x = prod_level, y = d15N_c)) +
+  geom_boxplot()
 
 
+d <- spider_iso %>%
+  mutate(d15N_p = d15N - plant_d15N) %>%
+  ggplot(aes(x = prod_level, y = d15N_p)) +
+  geom_boxplot()
+
+a + b+ c +d
+
+e <- ggplot(spider_iso, aes(x = d15N_c, y = d15N_g)) +
+  geom_abline(slope = 1, intercept = 0, linetype = 2) +
+  geom_point() +
+  labs(x = "Trophic position-marine wrack",
+       y = "Trophic position-guano for high-productivity")
+
+
+f <- ggplot(spider_iso, aes(x = d15N_c, y = d15N_g2)) +
+  geom_abline(slope = 1, intercept = 0, linetype = 2) +
+  geom_point()+
+  labs(x = "Trophic position-marine wrack",
+       y = "Trophic position-guano")
+
+baseline <- e + f +
+  plot_annotation(tag_levels = "A")
+
+ggsave(plot = baseline,
+       filename = 'baseline_supp.png',
+       path = here("pictures", "R"),
+       width = 8, height = 5,
+       units = "in")

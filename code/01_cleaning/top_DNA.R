@@ -47,12 +47,14 @@ DNA <- DNA %>%
   filter(sample_str == "HEV") %>%
   filter(Order != "Primates") %>%
   filter(ID_level %in% c("Order", "Family", "Genus", "Species")) %>%
-  filter(reads > 0) %>%
+  filter(reads > 1) %>%
   dplyr::select(sample, 
                 Class, 
                 Order,
                 reads) %>%
   mutate(sample = str_sub(sample,1,nchar(sample)-1)) %>%
+  mutate(Class = case_when(Class == "Entognatha" ~ 'Collembola',
+                           TRUE ~ Class)) %>%
   group_by(sample, Class, Order) %>%
   summarise(reads = sum(reads)) %>%
   mutate(presence = 1)
@@ -63,7 +65,10 @@ DNA_meta <- DNA_meta %>%
   filter(ID == "Heteropoda venatoria") %>% #& Year == 2015) %>%
   mutate(Isotope_ID = word(Isotope_ID,2)) %>%
   dplyr::select(Island, Habitat, Isotope_ID, Extraction.ID) %>%
-  distinct(Island, Habitat, Isotope_ID, Extraction.ID) 
+  distinct(Island, Habitat, Isotope_ID, Extraction.ID) %>%
+  mutate(category = case_when(Habitat %in% c('PF', 'PG', 'TA') ~ "high",
+                              Habitat == "CN" ~ 'low',
+                              TRUE ~ NA_character_)) 
 
 #combine DNA data with the isotope data 
 DNA_iso <- spider_iso %>%
@@ -72,7 +77,11 @@ DNA_iso <- spider_iso %>%
   full_join(DNA_meta, by = c("Island", c("ID" = "Isotope_ID"))) %>%
   filter(!is.na(Extraction.ID)) %>%
   left_join(DNA, by = c("Extraction.ID" = "sample")) %>%
-  filter(!Island %in% c("Cooper", "North Fighter")) %>%
+  #filter(!Island %in% c("Cooper", "North Fighter")) %>%
+  filter(Habitat != "TC") %>%
+  mutate(category = case_when(Habitat %in% c('PF', 'PG', 'TA') ~ "high",
+                              Habitat == "CN" ~ 'low',
+                              TRUE ~ NA_character_)) %>%
   filter(!is.na(Order)) %>%
   dplyr::select(-Island_Area, -Island_prod, -prod_level) %>%
   left_join(islands, by = "Island")
@@ -81,9 +90,14 @@ DNA_iso <- spider_iso %>%
 # Bar graph visualization DFs ---------------------------------------------
 
 
+# #get frequency of different kinds of prey by islet populations
+# islet_prey <- DNA_iso %>%
+#   group_by(Habitat, Class, Order) %>%
+#   summarise(Frequency = n())
+
 #get frequency of different kinds of prey by islet populations
 islet_prey <- DNA_iso %>%
-  group_by(Habitat, Class, Order) %>%
+  group_by(category, Class, Order) %>%
   summarise(Frequency = n())
 
 #get stats
@@ -92,12 +106,16 @@ DNA_iso %>%
   tally()
 
 DNA_iso %>%
-  distinct(Extraction.ID, Habitat) %>%
-  group_by(Habitat) %>%
+  distinct(Extraction.ID, category) %>%
+  group_by(category) %>%
   tally()
 
 DNA_iso %>%
   group_by(Habitat) %>%
+  tally()
+
+DNA_iso %>%
+  group_by(category) %>%
   tally()
 
 
@@ -114,7 +132,7 @@ DNA_matrix <- DNA_iso %>%
 
 DNA_metadata <- DNA_iso %>%
   ungroup() %>%
-  dplyr::select(Extraction.ID, prod_level, Habitat, Island) %>%
-  distinct(prod_level, Island, Habitat, Extraction.ID) %>%
+  dplyr::select(Extraction.ID, category, category, Habitat, Island) %>%
+  distinct(category, Island, Habitat, Extraction.ID) %>%
   column_to_rownames(var = "Extraction.ID")
 

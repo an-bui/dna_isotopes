@@ -114,7 +114,7 @@ iso_niche_opt3
 top_comm <- xt %>%
   rownames_to_column(var = "Extraction.ID") %>%
   left_join(DNA_meta, by = "Extraction.ID") %>%
-  ggplot(aes(x = CAP1, y = MDS1, color = Habitat)) +
+  ggplot(aes(x = CAP1, y = MDS1, color = category)) +
   geom_point(size = 2) +
   scale_fill_manual(values = c("#bf812d",
                                "#80cdc1")) +
@@ -127,7 +127,7 @@ top_comm <- xt %>%
 top_comm_opt2 <- xt %>%
   rownames_to_column(var = "Extraction.ID") %>%
   left_join(DNA_meta, by = "Extraction.ID") %>%
-  ggplot(aes(x = CAP1, y = MDS1, color = Habitat)) +
+  ggplot(aes(x = CAP1, y = MDS1, color = category)) +
   geom_point(size = 2) +
   scale_fill_manual(values = c(cn_col, pg_col)) +
   scale_color_manual(values = c(cn_col, pg_col)) +
@@ -147,7 +147,7 @@ top_comm_opt2
 
 #this is a boxplot showing the 95% area of the niche
 # for two different methods for isotopes
-niche_box <- ggplot(all_niche, aes(x = Method, y = ShapeArea, fill = Habitat)) +
+niche_box <- ggplot(all_niche, aes(x = Method, y = ShapeArea, fill = prod_level)) +
   geom_boxplot() +
   labs(y = "95% isotopic niche area", 
        x = "Isotopic niche method",
@@ -160,12 +160,12 @@ niche_box <- ggplot(all_niche, aes(x = Method, y = ShapeArea, fill = Habitat)) +
 # a boxplot with jittered points on top, or a violin?
 
 niche_box_opt2 <- all_niche %>% 
-  mutate(Habitat = recode(Habitat, CN = "Low", PG = "High")) %>% 
-  ggplot(aes(x = Method, y = ShapeArea, fill = Habitat)) +
+  mutate(prod_level = recode(prod_level, low = "Low", high = "High")) %>% 
+  ggplot(aes(x = Method, y = ShapeArea, fill = prod_level)) +
   geom_violin() +
   labs(y = "95% isotopic niche area", 
        x = "Isotopic niche method",
-       fill = "Habitat") +
+       fill = "Category") +
   scale_fill_manual(values = c(pg_col,
                                cn_col)) +
   theme_bw() +
@@ -187,7 +187,7 @@ niche_box_opt2
 # prey base is the same between CN and PG habitat, i'd like this
 #somewhat complex-looking graph to quickly convey that better
 # than it does 
-top_id <- ggplot(islet_prey, aes(x = Habitat, y = Frequency, fill = Order)) +
+top_id <- ggplot(islet_prey, aes(x = category, y = Frequency, fill = Order)) +
   geom_col(color = "black", position = "fill") +
   scale_fill_brewer(type = "qual", palette = "Set3") +
   theme_bw() +
@@ -203,40 +203,60 @@ top_id <- ggplot(islet_prey, aes(x = Habitat, y = Frequency, fill = Order)) +
 # Order == "Diptera" ~ "#468294",
 # Order == "Orthoptera" ~ "#0d5f78"
 
+#c6dbef
+#9ecae1
+#6baed6
+#4292c6
+#2171b5
+#08519c
+#08306b
+
+#greys
+#d9d9d9
+#bdbdbd
+#969696
+#737373
+#525252
+#252525
 # create a new data frame
 df_prey <- islet_prey %>% 
-  pivot_wider(names_from = Habitat, values_from = Frequency) %>% 
+  pivot_wider(names_from = category, values_from = Frequency) %>% 
   # shades of blue for shared orders
   mutate(color_col = case_when(
-    Order == "Araneae" ~ "#A1CAF6",
-    Order == "Blattodea" ~ "#6592D6",
-    Order == "Dermaptera" ~ "#4C6FA1",
-    Order == "Diptera" ~ "#375377",
-    Order == "Orthoptera" ~ "#1E2F46",
+    Order == "Araneae" ~ "#c6dbef",
+    Order == "Blattodea" ~ "#9ecae1",
+    Order == "Dermaptera" ~ "#6baed6",
+    Order == "Diptera" ~ "#4292c6",
+    Order == "Hymenoptera" ~ "#2171b5",
+    Order == "Orthoptera" ~ "#08519c",
+    Order == "Psocoptera" ~ "#08306b",
     # use grey for the orders that are not shared
-    Order == "Hemiptera" ~ "#E0E0E0",
-    Order == "Lepidoptera" ~ "#CBCBCB",
-    Order == "Geophilomorpha" ~ "#B7B7B7",
-    Order == "Hymenoptera" ~ "#A2A2A2",
-    Order == "Odonata" ~ "#8D8D8D",
-    Order == "Psocoptera" ~ "#787878",
-    Order == "Sarcoptiformes" ~ "#646464",
-    Order == "Scorpiones" ~ "#4F4F4F"
+    Order == "Entomobryomorpha" ~ "#d9d9d9",
+    Order == "Hemiptera" ~ "#bdbdbd",
+    Order == "Lepidoptera" ~ "#969696",
+    Order == "Geophilomorpha" ~ "#737373",
+    Order == "Sarcoptiformes" ~ "#525252",
+    Order == "Scorpiones" ~ "#252525"
   )) %>% 
-  pivot_longer(CN:PG, names_to = "Habitat", values_to = "Frequency") %>% 
+  pivot_longer(high:low, names_to = "Habitat", values_to = "Frequency") %>% 
   ungroup() %>% 
   fill(Order) %>% 
-  mutate(Habitat = recode(Habitat, CN = "Low", PG = "High"))
+  mutate(Habitat = recode(Habitat, low = "Low", high = "High"))
 
 levels_prey <- c(
   # five shared species in alphabetical order
-  "Araneae", "Blattodea", "Dermaptera", "Diptera", "Orthoptera",
+  "Araneae", "Blattodea", "Dermaptera", 
+ "Diptera", "Hymenoptera", "Orthoptera",
+  "Psocoptera",
   # unique species ordered by frequency of occurrence
   # > 1
-  "Hemiptera", "Lepidoptera", 
+ 'Entomobryomorpha',
+ "Hemiptera",
+ "Lepidoptera",
   # 1
-  "Geophilomorpha", "Hymenoptera","Odonata", 
-  "Psocoptera", "Sarcoptiformes", "Scorpiones"
+ "Geophilomorpha",
+ "Sarcoptiformes",
+ "Scorpiones"
   )
 
 # CN data frame
@@ -333,7 +353,7 @@ ggsave(plot = fig1_opt2,
 int_comm <- xi %>%
   rownames_to_column(var = "Extraction.ID") %>%
   left_join(DNA_intmeta, by = "Extraction.ID") %>%
-  ggplot(aes(x = CAP1, y = MDS1, color = Habitat)) +
+  ggplot(aes(x = CAP1, y = MDS1, color = category)) +
   geom_point(size = 2) +
   scale_fill_manual(values = c("#bf812d",
                                "#80cdc1")) +
@@ -346,7 +366,7 @@ int_comm <- xi %>%
 int_comm_opt2 <- xi %>%
   rownames_to_column(var = "Extraction.ID") %>%
   left_join(DNA_intmeta, by = "Extraction.ID") %>%
-  ggplot(aes(x = CAP1, y = MDS1, color = Habitat)) +
+  ggplot(aes(x = CAP1, y = MDS1, color = category)) +
   geom_point(size = 5) +
   scale_fill_manual(values = c(cn_col, pg_col)) +
   scale_color_manual(values = c(cn_col, pg_col)) +
@@ -368,7 +388,7 @@ int_comm_opt2
 #int predator proportional bar graph
 # again, I think ordering this by shared prsence and/or relative
 #abundance would help visualize that the diet has shifted a fair bit
-int_id <- ggplot(habitat_int, aes(x = Habitat, y = Frequency, fill = Order)) +
+int_id <- ggplot(habitat_int, aes(x = category, y = Frequency, fill = Order)) +
   geom_col(color = "black", position = "fill") +
   scale_fill_brewer(type = "qual", palette = "Set3") +
   theme_bw() +
@@ -385,35 +405,61 @@ int_id <- ggplot(habitat_int, aes(x = Habitat, y = Frequency, fill = Order)) +
 # Order == "Orthoptera" ~ "#876d2a", 
 # Order == "Psocoptera" ~ "#6b5210"
 
+#orang-yellows
+#fff7bc
+#fee391
+#fec44f
+#fe9929
+#ec7014
+#cc4c02
+#993404
+#662506
+
+#greys
+#d9d9d9
+#bdbdbd
+#969696
+#737373
+#525252
+#252525
+
 # create a new data frame
 df_int <- habitat_int %>% 
-  pivot_wider(names_from = Habitat, values_from = Frequency) %>% 
+  pivot_wider(names_from = category, values_from = Frequency) %>% 
   # shades of blue for shared orders
   mutate(color_col = case_when(
     # yellowish oranges for shared orders
-    Order == "Araneae" ~ "#F2B705",
-    Order == "Diptera" ~ "#F29F05",
-    Order == "Hymenoptera" ~ "#F28705",
-    Order == "Lepidoptera" ~ "#D95204",
-    Order == "Orthoptera" ~ "#A62F03", 
-    Order == "Psocoptera" ~ "#701e00", 
+    Order == "Araneae" ~ "#fff7bc",
+    Order == "Blattodea" ~ "#fee391",
+    Order == "Diptera" ~ "#fec44f",
+    Order == "Hymenoptera" ~ "#fe9929",
+    Order == "Lepidoptera" ~ "#ec7014",
+    Order == "Orthoptera" ~ "#cc4c02", 
+    Order == "Psocoptera" ~ "#993404", 
+    Order == "Thysanoptera" ~ "#662506",
     # use grey for the orders that are not shared
-    Order == "Blattodea" ~ "#E0E0E0",
-    Order == "Coleoptera" ~ "#787878",
-    Order == "Thysanoptera" ~ "#B7B7B7"
-  )) %>% 
-  pivot_longer(CN:PG, names_to = "Habitat", values_to = "Frequency") %>% 
+    Order == "Coleoptera" ~ "#d9d9d9",
+    Order == "Hemiptera" ~ "#bdbdbd",
+    Order == "Entomobryomorpha" ~ "#969696")) %>% 
+  pivot_longer(high:low, names_to = "Habitat", values_to = "Frequency") %>% 
   ungroup() %>% 
   fill(Order) %>% 
-  mutate(Habitat = recode(Habitat, CN = "Low", PG = "High"))
+  mutate(Habitat = recode(Habitat, low = "Low", high = "High"))
 
 levels_pred <- c(
   # six shared species in alphabetical order
-  "Araneae", "Diptera", "Hymenoptera", 
-  "Lepidoptera", "Orthoptera", "Psocoptera",
-  
-  # unique species
-  "Blattodea", "Thysanoptera", "Coleoptera"
+  "Araneae",
+  "Blattodea",
+  "Diptera",
+  "Hymenoptera",
+  "Lepidoptera",
+  "Orthoptera", 
+  "Psocoptera", 
+  "Thysanoptera",
+  #orders that are not shared
+  "Coleoptera",
+  "Hemiptera",
+  "Entomobryomorpha"
 )
 
 # CN data frame
