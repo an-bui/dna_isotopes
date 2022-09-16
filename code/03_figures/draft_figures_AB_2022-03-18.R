@@ -330,6 +330,12 @@ ggsave(plot = fig1,
        width = 7, height = 7,
        units = "in")
 
+ggsave(plot = fig1,
+       filename = 'top_niche.pdf',
+       path = here("pictures", "R"),
+       width = 7, height = 7,
+       units = "in")
+
 fig1_opt2 <- (iso_niche_opt3 + top_comm_opt2)/(niche_box_opt2 + top_id_opt2) +
   plot_layout(tag_level = "new") &
   plot_annotation(tag_levels = list(c("A", "B", "C", "D", ""))) &
@@ -342,6 +348,11 @@ ggsave(plot = fig1_opt2,
        width = 18, height = 14,
        units = "in")
 
+ggsave(plot = fig1_opt2,
+       filename = 'top_niche_opt2_2022-09-16.pdf',
+       path = here("pictures", "R"),
+       width = 18, height = 14,
+       units = "in")
 
 
 # Figure 2: Intermediate/Secondary Preds ----------------------------------
@@ -463,7 +474,7 @@ levels_pred <- c(
   "Psocoptera", 
   "Thysanoptera",
   #orders that are not shared
-  "Coleoptera",
+  "Coleoptera *",
   "Hemiptera",
   "Entomobryomorpha"
 )
@@ -547,6 +558,12 @@ fig2_opt2
 
 ggsave(plot = fig2_opt2,
        filename = 'int_niche_opt2_2022-09-16.png',
+       path = here("pictures", "R"),
+       width = 16, height = 10,
+       units = "in")
+
+ggsave(plot = fig2_opt2,
+       filename = 'int_niche_opt2_2022-09-16.pdf',
        path = here("pictures", "R"),
        width = 16, height = 10,
        units = "in")
