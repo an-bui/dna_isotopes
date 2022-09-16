@@ -97,7 +97,9 @@ iso_niche_opt3 <- spider_iso %>%
   scale_linetype_manual(values = c(1, 2), guide = "none") +
   # in plot annotations of CN and PG
   annotate("text", x = -26.7, y = 7.4, label = "High", size = 10.5, col = pg_col) +
-  annotate("text", x = -20.05, y = 3.4, label = "Low", size = 10.5, col = cn_col) +
+  annotate("text", x = -26.9, y = 6.95, label = "n = 88", size = 6, col = pg_col) +
+  annotate("text", x = -20.05, y = 3.5, label = "Low", size = 10.5, col = cn_col) +
+  annotate("text", x = -20.15, y = 3.1, label = "n = 64", size = 6, col = cn_col) +
   theme_bw() +
   theme(axis.text = element_text(size = 23),
         axis.title = element_text(size = 23),
@@ -116,10 +118,10 @@ top_comm <- xt %>%
   left_join(DNA_meta, by = "Extraction.ID") %>%
   ggplot(aes(x = CAP1, y = MDS1, color = category)) +
   geom_point(size = 2) +
-  scale_fill_manual(values = c("#bf812d",
-                               "#80cdc1")) +
-  scale_color_manual(values = c("#bf812d",
-                                "#80cdc1")) +
+  # scale_fill_manual(values = c("#bf812d",
+  #                              "#80cdc1")) +
+  # scale_color_manual(values = c("#bf812d",
+  #                               "#80cdc1")) +
   stat_ellipse(size = 1) +
   theme_bw() +
   labs(title = "Top predators")
@@ -129,8 +131,8 @@ top_comm_opt2 <- xt %>%
   left_join(DNA_meta, by = "Extraction.ID") %>%
   ggplot(aes(x = CAP1, y = MDS1, color = category)) +
   geom_point(size = 2) +
-  scale_fill_manual(values = c(cn_col, pg_col)) +
-  scale_color_manual(values = c(cn_col, pg_col)) +
+  scale_fill_manual(values = c(pg_col, cn_col)) +
+  scale_color_manual(values = c(pg_col, cn_col)) +
   stat_ellipse(size = 1) +
   theme_bw() +
   theme(axis.text = element_text(size = 23),
@@ -138,8 +140,10 @@ top_comm_opt2 <- xt %>%
         legend.position = "none"
   ) +
   # in plot annotations of CN and PG
-  annotate("text", x = -4, y = 1.7, label = "Low", size = 11, col = cn_col) +
-  annotate("text", x = 2.8, y = -1.8, label = "High", size = 11, col = pg_col) 
+  annotate("text", x = -4.5, y = -1.3, label = "Low", size = 11, col = cn_col) +
+  annotate("text", x= -4.6, y = -1.7, label = "n = 13", size = 6, col = cn_col) +
+  annotate("text", x = 2.8, y = 1.8, label = "High", size = 11, col = pg_col) +
+  annotate("text", x = 2.65, y = 1.4, label = "n = 23", size = 6, col = pg_col) 
 
 top_comm_opt2
 
@@ -333,7 +337,7 @@ fig1_opt2 <- (iso_niche_opt3 + top_comm_opt2)/(niche_box_opt2 + top_id_opt2) +
 fig1_opt2
 
 ggsave(plot = fig1_opt2,
-       filename = 'top_niche_opt2.png',
+       filename = 'top_niche_opt2_2022-09-16.png',
        path = here("pictures", "R"),
        width = 18, height = 14,
        units = "in")
@@ -377,8 +381,10 @@ int_comm_opt2 <- xi %>%
         legend.position = "none"
   ) +
   # in plot annotations of CN and PG
-  annotate("text", x = -2, y = -1.5, label = "Low", size = 11, col = cn_col) +
-  annotate("text", x = 1, y = 2, label = "High", size = 11, col = pg_col)
+  annotate("text", x = -2, y = -0.5, label = "Low", size = 11, col = cn_col) +
+  annotate("text", x = -2.05, y = -0.75, label = "n = 7", size = 8, col = cn_col) +
+  annotate("text", x = 1.5, y = 2, label = "High", size = 11, col = pg_col) +
+  annotate("text", x = 1.5, y = 1.75, label = "n = 29", size = 8, col = pg_col)
 
 int_comm_opt2
 
@@ -426,7 +432,6 @@ int_id <- ggplot(habitat_int, aes(x = category, y = Frequency, fill = Order)) +
 # create a new data frame
 df_int <- habitat_int %>% 
   pivot_wider(names_from = category, values_from = Frequency) %>% 
-  # shades of blue for shared orders
   mutate(color_col = case_when(
     # yellowish oranges for shared orders
     Order == "Araneae" ~ "#fff7bc",
@@ -444,14 +449,15 @@ df_int <- habitat_int %>%
   pivot_longer(high:low, names_to = "Habitat", values_to = "Frequency") %>% 
   ungroup() %>% 
   fill(Order) %>% 
-  mutate(Habitat = recode(Habitat, low = "Low", high = "High"))
+  mutate(Habitat = recode(Habitat, low = "Low", high = "High")) %>% 
+  mutate(Order = recode(Order, Araneae = "Araneae *", Diptera = "Diptera *", Hymenoptera = "Hymenoptera *"))
 
 levels_pred <- c(
   # six shared species in alphabetical order
-  "Araneae",
+  "Araneae *",
   "Blattodea",
-  "Diptera",
-  "Hymenoptera",
+  "Diptera *",
+  "Hymenoptera *",
   "Lepidoptera",
   "Orthoptera", 
   "Psocoptera", 
@@ -540,7 +546,7 @@ fig2_opt2 <- (int_comm_opt2 + int_id_opt2) +
 fig2_opt2
 
 ggsave(plot = fig2_opt2,
-       filename = 'int_niche_opt2.png',
+       filename = 'int_niche_opt2_2022-09-16.png',
        path = here("pictures", "R"),
        width = 16, height = 10,
        units = "in")
